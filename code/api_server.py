@@ -7,8 +7,11 @@ from typing import Optional, List
 
 # Add code directory to path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / 'goproUSB'))
 from go2kin import load_app_config, save_app_config
 from project_manager import ProjectManager
+from goproUSB import GPcam
+from camera_profiles import get_profile_manager
 
 app = FastAPI(title="Go2Kin API")
 
@@ -28,6 +31,8 @@ if not app_config.get("data_root") or not Path(app_config["data_root"]).is_dir()
     app_config["data_root"] = str(Path(__file__).resolve().parent.parent / "output")
     Path(app_config["data_root"]).mkdir(parents=True, exist_ok=True)
 pm = ProjectManager(app_config["data_root"])
+profile_manager = get_profile_manager()
+connected_cameras = {} # Mapping of serial_number -> GPcam instance
 
 class ConfigUpdate(BaseModel):
     data_root: Optional[str] = None
@@ -136,6 +141,94 @@ def create_or_update_subject(project: str, data: SubjectData):
         return {"status": "success", "subject_id": data.subject_id}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+# ==========================================
+# Camera Control
+# ==========================================
+
+@app.get("/api/cameras")
+def list_cameras():
+    serials = app_config.get("gopro_serial_numbers", [])
+    result = []
+    for s in serials:
+        status = "disconnected"
+        batt = None
+        if s in connected_cameras:
+            try:
+                state = connected_cameras[s].getState()
+                if state.status_code == 200:
+                    status = "connected"
+                    batt = state.json().get("status", {}).get("70", None) # 70 is internal battery %
+                else:
+                    status = "error"
+            except Exception:
+                status = "error"
+        result.append({"serial": s, "status": status, "battery": batt})
+    return {"cameras": result}
+
+@app.post("/api/cameras/{serial}/connect")
+def connect_camera(serial: str):
+    cam = GPcam(serial)
+    try:
+        # Test connection
+        res = cam.getCameraInfo()
+        if res.status_code == 200:
+            connected_cameras[serial] = cam
+            cam.USBenable()
+            
+            # Optional: update profile
+            try:
+                state_res = cam.getState()
+                if state_res.status_code == 200:
+                    cam_info = res.json()
+                    state_json = state_res.json()
+                    # We might need reference to properly create profile, but we'll try without
+                    model = cam_info.get('model_name', '')
+                    firmware = cam_info.get('firmware_version', '')
+                    reference = profile_manager.load_settings_reference(model, firmware)
+                    if reference:
+                        profile_manager.create_or_update_profile(cam_info, state_json, reference)
+            except Exception as e:
+                print(f"Warning: Failed to update camera profile for {serial}: {e}")
+                
+            return {"status": "success"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to connect, camera returned error")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cameras/{serial}/disconnect")
+def disconnect_camera(serial: str):
+    if serial in connected_cameras:
+        try:
+            connected_cameras[serial].USBdisable()
+        except:
+            pass
+        del connected_cameras[serial]
+    return {"status": "success"}
+
+class GlobalSettings(BaseModel):
+    resolution: int
+    fps: int
+
+@app.post("/api/cameras/settings/global")
+def set_global_settings(settings: GlobalSettings):
+    results = {}
+    for s, cam in connected_cameras.items():
+        try:
+            cam.setSetting(2, settings.resolution)
+            cam.setSetting(3, settings.fps)
+            results[s] = "success"
+        except Exception as e:
+            results[s] = str(e)
+    return {"status": "complete", "results": results}
+
+@app.get("/api/cameras/{serial}/settings")
+def get_camera_settings(serial: str):
+    profile = profile_manager.load_camera_profile(serial)
+    if profile:
+        return {"status": "success", "profile": profile}
+    raise HTTPException(status_code=404, detail="Camera profile not found")
 
 if __name__ == "__main__":
     import uvicorn
