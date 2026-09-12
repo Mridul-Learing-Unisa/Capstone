@@ -6,3 +6,6 @@ scipy
 pandas
 matplotlib
 sounddevice
+fastapi
+uvicorn
+pydantic
