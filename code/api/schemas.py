@@ -28,3 +28,22 @@ class SubjectData(BaseModel):
     height_m: float
     mass_kg: float
     notes: str = ""
+
+
+class GlobalSettings(BaseModel):
+    resolution: int
+    fps: int
+
+
+class CharucoConfig(BaseModel):
+    columns: int
+    rows: int
+    square_size_cm: float
+    aruco_scale: float
+    dict_name: str
+    inverted: bool
+
+
+class CalibExtrinsicData(BaseModel):
+    cameras_used: List[str]
+    sound_source: Optional[List[float]] = [0.0, 0.0, 0.0]
