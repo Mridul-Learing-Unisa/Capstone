@@ -29,7 +29,7 @@ app.include_router(projects.router)
 # app.include_router(calibration.router)   # add as each tab's endpoints are ready
 # app.include_router(recording.router)
 # app.include_router(processing.router)
-# app.include_router(live_preview.router)
+# app.include_router(preview.router)
 
 if __name__ == "__main__":
     import uvicorn
