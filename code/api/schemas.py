@@ -1,0 +1,1 @@
+# Pydantic request/response models shared across routers (config updates, project/session creation, subject data).

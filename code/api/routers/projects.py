@@ -1,0 +1,1 @@
+# Endpoints for managing projects, sessions, trials, and subjects, backed by ProjectManager.
