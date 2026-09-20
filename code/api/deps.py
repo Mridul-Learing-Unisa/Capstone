@@ -67,5 +67,6 @@ def get_calibration_state(request: Request) -> dict:
 def get_recording_start_info(request: Request) -> dict:
     return request.app.state.recording_start_info
 
+# Register the dependencies for use in recording_router.
 connected_cameras = Depends(get_connected_cameras)
 recording_start_info = Depends(get_recording_start_info)
