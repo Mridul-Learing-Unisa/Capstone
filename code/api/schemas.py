@@ -51,7 +51,7 @@ class CalibExtrinsicData(BaseModel):
     
 
 # Recording Tab schemas
-class RecordingStart(BaseModel):
+class RecordingStartRequest(BaseModel):
     trial_name: str = Field(min_length=1)
     cameras_used: List[str] = Field(min_length=1)
     sound_source_position: List[float] = Field(
