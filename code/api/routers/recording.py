@@ -58,3 +58,42 @@ def start_recording(recording_data_request: RecordingStartRequest, connected_cam
         "cameras_used": recording_start_info["cameras_used"],
         "sound_source_position": recording_start_info["sound_source_position"],
     }
+    
+    
+@router.post("/stop")
+def stop_recording(
+    connected_cameras=connected_cameras,
+    recording_start_info=recording_start_info,
+):
+    if not recording_start_info["cameras_used"]:
+        raise HTTPException(
+            status_code=409,
+            detail="No active recording to stop.",
+        )
+
+    errors = {}
+
+    for camera_serial in recording_start_info["cameras_used"]:
+        camera = connected_cameras.get(camera_serial)
+
+        if camera is None:
+            errors[camera_serial] = "Camera not found."
+            continue
+
+        try:
+            response = camera.shutterStop()
+            response.raise_for_status()
+        except Exception as e:
+            errors[camera_serial] = str(e)
+
+    # This runs after every camera has received a stop request
+    if errors:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Could not confirm stop for some cameras.",
+                "errors": errors,
+            },
+        )
+
+    return {"message": "Recording stopped"} 
