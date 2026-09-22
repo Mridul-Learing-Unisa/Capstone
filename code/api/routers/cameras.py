@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from goproUSB import GPcam
+from goproUSB.goproUSB import GPcam
 from api.deps import get_app_config, get_connected_cameras, get_profile_manager_dep
 from api.schemas import GlobalSettings
 
