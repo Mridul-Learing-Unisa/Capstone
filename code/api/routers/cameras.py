@@ -450,6 +450,7 @@ def zoom_out(
 
 @router.post("/{serial}/mode")
 def set_mode(serial: str, body: ModeRequest, connected_cameras: dict = Depends(get_connected_cameras)):
+    """Switch the camera's preset group — {mode: "video", "photo", "timelapse"}"""
     cam = _get_connected_camera(serial, connected_cameras)
     func_name = _MODE_FUNCS.get(body.mode)
     if func_name is None:
@@ -466,6 +467,8 @@ def set_mode(serial: str, body: ModeRequest, connected_cameras: dict = Depends(g
 
 @router.post("/{serial}/sync-time")
 def sync_time(serial: str, connected_cameras: dict = Depends(get_connected_cameras)):
+    """Push the server's current time to the camera clock, via setDateTimeNow()
+    — keeps video timestamps consistent across cameras"""
     cam = _get_connected_camera(serial, connected_cameras)
     response = cam.setDateTimeNow()
     if response.status_code != 200:
