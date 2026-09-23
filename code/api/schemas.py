@@ -36,6 +36,35 @@ class GlobalSettings(BaseModel):
     fps: int
 
 
+class ResolutionRequest(BaseModel):
+    resolution: str  # display name, e.g. "4K", "1080"
+
+
+class FPSRequest(BaseModel):
+    fps: str  # display name, e.g. "50", "100"
+
+
+class LensRequest(BaseModel):
+    lens: str  # display name, e.g. "Linear", "Wide"
+
+
+class SettingRequest(BaseModel):
+    setting_id: int
+    display_name: str
+
+
+class ZoomRequest(BaseModel):
+    percent: int = Field(ge=0, le=100)
+
+
+class ZoomStepRequest(BaseModel):
+    step: int = 5
+
+
+class ModeRequest(BaseModel):
+    mode: str  # "video" | "photo" | "timelapse"
+
+
 class CharucoConfig(BaseModel):
     columns: int
     rows: int
