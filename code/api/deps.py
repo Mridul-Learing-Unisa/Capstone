@@ -3,7 +3,7 @@
 # get_project_manager() / get_app_config() so nothing relies on module globals.
 
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends
 
 from go2kin import load_app_config, save_app_config
 from project_manager import ProjectManager
@@ -34,6 +34,15 @@ def init_app_state(app: FastAPI) -> None:
         "recording_info": None,
         "charuco": None,
     }
+    
+    # Recording start information, used by the recording tab to track the current recording session.
+    app.state.recording_start_info = {
+        "cameras_used": [],
+        "trial_name": None,
+        "sound_source_position": []
+    }
+    
+    app.state.recording_background_tasks = {}
 
 
 def get_project_manager(request: Request) -> ProjectManager:
@@ -54,3 +63,16 @@ def get_profile_manager_dep(request: Request):
 
 def get_calibration_state(request: Request) -> dict:
     return request.app.state.calibration_state
+
+
+# Recording Tab dependencies
+def get_recording_start_info(request: Request) -> dict:
+    return request.app.state.recording_start_info
+
+def get_recording_background_tasks(request: Request) -> dict:
+    return request.app.state.recording_background_tasks
+
+# Register the dependencies for use in recording_router.
+connected_cameras = Depends(get_connected_cameras)
+recording_start_info = Depends(get_recording_start_info)
+recording_background_tasks = Depends(get_recording_background_tasks)

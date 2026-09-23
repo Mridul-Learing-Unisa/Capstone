@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 
 
+
 class ConfigUpdate(BaseModel):
     data_root: Optional[str] = None
     gopro_serial_numbers: Optional[List[str]] = None
@@ -76,3 +77,14 @@ class CharucoConfig(BaseModel):
 class CalibExtrinsicData(BaseModel):
     cameras_used: List[str]
     sound_source: Optional[List[float]] = [0.0, 0.0, 0.0]
+    
+
+# Recording Tab schemas
+class RecordingStartRequest(BaseModel):
+    trial_name: str = Field(min_length=1)
+    cameras_used: List[str] = Field(min_length=1)
+    sound_source_position: List[float] = Field(
+        min_length=3,
+        max_length=3,
+    )
+

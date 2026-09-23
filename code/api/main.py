@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from api.deps import init_app_state
-from api.routers import config, projects
+from api.routers import config, projects, cameras, recording
 
 app = FastAPI(title="Go2Kin API")
 
@@ -27,7 +27,8 @@ init_app_state(app)
 app.include_router(config.router)
 app.include_router(projects.router)
 # app.include_router(calibration.router)   # add as each tab's endpoints are ready
-# app.include_router(recording.router)
+app.include_router(cameras.router)
+app.include_router(recording.router)
 # app.include_router(processing.router)
 # app.include_router(preview.router)
 
