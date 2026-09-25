@@ -44,6 +44,12 @@ def init_app_state(app: FastAPI) -> None:
     
     app.state.recording_background_tasks = {}
 
+    app.state.selection_state = {"project": None, "session": None, "subject_id": None}
+
+
+def get_selection_state(request: Request) -> dict:
+    return request.app.state.selection_state
+
 
 def get_project_manager(request: Request) -> ProjectManager:
     return request.app.state.pm
@@ -69,10 +75,13 @@ def get_calibration_state(request: Request) -> dict:
 def get_recording_start_info(request: Request) -> dict:
     return request.app.state.recording_start_info
 
+
 def get_recording_background_tasks(request: Request) -> dict:
     return request.app.state.recording_background_tasks
+
 
 # Register the dependencies for use in recording_router.
 connected_cameras = Depends(get_connected_cameras)
 recording_start_info = Depends(get_recording_start_info)
 recording_background_tasks = Depends(get_recording_background_tasks)
+selection_state = Depends(get_selection_state)
