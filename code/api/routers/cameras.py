@@ -63,12 +63,14 @@ def _apply_named_setting(serial: str, cam: GPcam, setting_id: int, display_name:
             detail=f"No settings reference found for {model} {firmware}. "
                    f"Run tools/discover_camera_settings.py {serial} first.",
         )
+    
+    ref_settings = reference.get("settings", {})
 
     setting_id_str = str(setting_id)
-    if setting_id_str not in reference["settings"]:
+    if setting_id_str not in ref_settings:
         raise HTTPException(status_code=400, detail=f"Setting {setting_id} not found in reference")
 
-    options = reference["settings"][setting_id_str]["available_options"]
+    options = ref_settings[setting_id_str].get("available_options", {})
     option_id = next((int(opt_id) for opt_id, name in options.items() if name == display_name), None)
     if option_id is None:
         raise HTTPException(
@@ -83,27 +85,46 @@ def _apply_named_setting(serial: str, cam: GPcam, setting_id: int, display_name:
 
     if response.status_code == 200:
         state_res = cam.getState()
-        profile = profile_manager.create_or_update_profile(
-            cam_info, state_res.json() if state_res.status_code == 200 else {}, reference
-        )
+ 
+        if state_res.status_code == 200:
+            # Full, accurate refresh straight from the camera's current state.
+            try:
+                profile = profile_manager.create_or_update_profile(cam_info, state_res.json(), reference)
+            except KeyError as e:
+                # create_or_update_profile needs camera_info['serial_number'],
+                # and parse_camera_state needs 'name'/'available_options' on
+                # each reference entry. Missing either shouldn't surface as a
+                # bare unhandled 500.
+                raise HTTPException(status_code=502, detail=f"Camera profile update failed, missing {e}")
+        else:
+            # getState failed. create_or_update_profile REPLACES current_settings
+            # and current_status wholesale from whatever state it's given, so
+            # calling it with no state here would wipe everything the profile
+            # already knew, not just leave this one setting stale.
+            profile = profile_manager.load_camera_profile(serial) or {}
+            setting_name = ref_settings[setting_id_str].get("name", f"Setting {setting_id}")
+            profile.setdefault("current_settings", {})[setting_id_str] = {
+                "value": option_id,
+                "name": setting_name,
+                "value_name": display_name,
+            }
+ 
         profile.setdefault("current_settings", {}).setdefault(setting_id_str, {})
         profile["current_settings"][setting_id_str]["value"] = option_id
         profile["current_settings"][setting_id_str]["value_name"] = display_name
-
-        # Resolution/fps changes can reset digital zoom on the camera — reapply
+ 
+        # Resolution/fps changes can reset digital zoom on the camera, reapply
         # whatever the last saved zoom level was, same as the desktop app did.
-        existing_profile = profile_manager.load_camera_profile(serial)
-        saved_zoom = existing_profile.get("current_zoom", 0) if existing_profile else 0
+        saved_zoom = profile.get("current_zoom", 0)
         if saved_zoom:
-            profile["current_zoom"] = saved_zoom
             try:
                 cam.setDigitalZoom(saved_zoom)
             except Exception:
-                pass  # non-critical — zoom just won't be restored this time
-
+                pass  # non-critical, zoom just won't be restored this time
+ 
         profile_manager.save_camera_profile(serial, profile)
         return {"status": "success", "setting_id": setting_id, "value": option_id, "value_name": display_name}
-
+ 
     if response.status_code == 403:
         try:
             error_data = response.json()
@@ -117,7 +138,7 @@ def _apply_named_setting(serial: str, cam: GPcam, setting_id: int, display_name:
                 "available_options": available,
             },
         )
-
+ 
     raise HTTPException(status_code=502, detail=f"Unexpected camera response: {response.status_code}")
 
 
