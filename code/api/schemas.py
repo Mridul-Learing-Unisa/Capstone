@@ -13,12 +13,26 @@ class ConfigUpdate(BaseModel):
     last_calibration: Optional[str] = None
 
 
+class SelectionUpdate(BaseModel):
+    project: Optional[str] = None
+    session: Optional[str] = None
+    subject_id: Optional[str] = None
+
+
 class ProjectCreate(BaseModel):
     name: str
 
 
 class SessionCreate(BaseModel):
     name: str
+
+
+class TrialUpdate(BaseModel):
+    subject_id: Optional[str] = None
+    calibration_file: Optional[str] = None
+    cameras_used: Optional[List[str]] = None
+    synced: Optional[bool] = None
+    processed: Optional[bool] = None
 
 
 class SubjectData(BaseModel):
