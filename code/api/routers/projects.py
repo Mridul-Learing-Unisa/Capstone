@@ -30,6 +30,8 @@ def create_project(data: ProjectCreate, pm: ProjectManager = Depends(get_project
 def list_sessions(project: str, pm: ProjectManager = Depends(get_project_manager)):
     try:
         return {"sessions": pm.list_sessions(project)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -39,6 +41,8 @@ def create_session(project: str, data: SessionCreate, pm: ProjectManager = Depen
     try:
         pm.create_session(project, data.name)
         return {"status": "success", "session": data.name}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -49,6 +53,8 @@ def list_trials(project: str, session: str, pm: ProjectManager = Depends(get_pro
         trials = pm.list_trials(project, session)
         trial_details = [pm.get_trial(project, session, t) for t in trials]
         return {"trials": trial_details}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -57,6 +63,8 @@ def list_trials(project: str, session: str, pm: ProjectManager = Depends(get_pro
 def list_subjects(project: str, pm: ProjectManager = Depends(get_project_manager)):
     try:
         return {"subjects": pm.list_subjects(project)}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -78,6 +86,8 @@ def create_or_update_subject(project: str, data: SubjectData, pm: ProjectManager
                 data.sex, data.height_m, data.mass_kg, data.notes,
             )
         return {"status": "success", "subject_id": data.subject_id}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -133,6 +143,8 @@ def get_project_tree(project: str, pm: ProjectManager = Depends(get_project_mana
     """
     try:
         return pm.get_project_tree(project)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -153,6 +165,8 @@ def get_calibration_freshness(project: str, pm: ProjectManager = Depends(get_pro
             "calibration": latest,
             "age_days": age_days,
         }
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
