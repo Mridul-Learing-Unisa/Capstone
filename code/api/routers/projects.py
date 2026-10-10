@@ -105,7 +105,7 @@ def update_trial(
     pm: ProjectManager = Depends(get_project_manager),
 ):
     try:
-        pm.update_trial(project, session, trial_name, **data.dict(exclude_unset=True))
+        pm.update_trial(project, session, trial_name, **data.model_dump(exclude_unset=True))
         return {"status": "success", "trial": pm.get_trial(project, session, trial_name)}
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

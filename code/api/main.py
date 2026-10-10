@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # Add code/ directory to path so sibling modules (go2kin.py, project_manager.py) import cleanly
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# goproUSB/ is a folder containing goproUSB.py; add it so `from goproUSB import GPcam` finds the module
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "goproUSB"))
 
 from api.deps import init_app_state
 from api.routers import config, projects, cameras, recording

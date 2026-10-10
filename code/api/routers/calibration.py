@@ -58,7 +58,7 @@ def set_charuco(config: CharucoConfig, app_config: dict = Depends(get_app_config
     calib_dir, charuco_path = _calibration_paths(app_config)
     calib_dir.mkdir(parents=True, exist_ok=True)
     with open(charuco_path, "w") as f:
-        json.dump(config.dict(), f, indent=4)
+        json.dump(config.model_dump(), f, indent=4)
     return {"status": "success"}
 
 
