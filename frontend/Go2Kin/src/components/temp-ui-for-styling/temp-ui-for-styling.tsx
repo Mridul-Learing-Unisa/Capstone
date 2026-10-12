@@ -1,3 +1,10 @@
+import SuccessIcon from "../icons/success-icon"
+import ProcessingIcon from "../icons/processing-icon"
+import FailIcon from "../icons/fail-icon"
+import DisabledIcon from "../icons/disabled-icon"
+import WarningIcon from "../icons/warning-icon"
+import ConnectedIcon from "../icons/connected-icon"
+import DisconnectedIcon from "../icons/disconnected-icon"
 
 const swatch = (name: string) => (
   <div key={name} style={{ background: `var(${name})`, border: '1px solid var(--border-primary)', padding: 'var(--padding-small)', minWidth: '9rem' }}>
@@ -10,6 +17,16 @@ export default function TempUIForStyling() {
   return (
     <main style={{ padding: 'var(--padding-base)', display: 'flex', flexDirection: 'column', gap: 'var(--padding-base)' }}>
       <h1>Layout: #root (centered column, borders left/right)</h1>
+
+      <div className="flex items-center gap-5">
+        <SuccessIcon />
+        <ProcessingIcon />
+        <FailIcon />
+        <DisabledIcon />
+        <WarningIcon />
+        <ConnectedIcon />
+        <DisconnectedIcon />
+      </div>
 
       <section>
         <h2>section h2 (text-secondary)</h2>
