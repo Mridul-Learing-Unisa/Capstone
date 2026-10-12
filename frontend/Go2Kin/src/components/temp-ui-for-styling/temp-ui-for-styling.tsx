@@ -18,16 +18,6 @@ export default function TempUIForStyling() {
     <main style={{ padding: 'var(--padding-base)', display: 'flex', flexDirection: 'column', gap: 'var(--padding-base)' }}>
       <h1>Layout: #root (centered column, borders left/right)</h1>
 
-      <div className="flex items-center gap-5">
-        <SuccessIcon />
-        <ProcessingIcon />
-        <FailIcon />
-        <DisabledIcon />
-        <WarningIcon />
-        <ConnectedIcon />
-        <DisconnectedIcon />
-      </div>
-
       <section>
         <h2>section h2 (text-secondary)</h2>
         <p>Plain paragraph in section: text-primary on bg-main, with border, radius and shadow.</p>
@@ -112,6 +102,29 @@ export default function TempUIForStyling() {
       <button type="button" className="button-large bg-success">Start</button>
       <button type="button" className="button-large bg-processing">Processing</button>
       <button type="button" className="button-large bg-error">Stop</button>
+
+      <div className="flex items-center gap-5">
+        <SuccessIcon />
+        <ProcessingIcon />
+        <FailIcon />
+        <DisabledIcon />
+        <WarningIcon />
+        <ConnectedIcon />
+        <DisconnectedIcon />
+      </div>
+
+      <div className="popup w-[30rem] h-[20rem]">
+        <WarningIcon />
+        <h2 className="text-large text-error">WARNING!</h2>
+        <div className="text-text-secondary">
+          <p>Calibration is too old.</p>
+          <p>A new calibration is required.</p>
+        </div>
+        <div className="flex gap-5">
+          <button type="button" className="text-bg-main bg-success border-0 w-[8rem]">Calibrate</button>
+          <button type="button" className="w-[8rem]">Later</button>
+        </div>
+      </div>
     </main>
   )
 }
