@@ -6,17 +6,22 @@
 @theme {
   --font-sans: 'Inter Variable', system-ui, 'Segoe UI', sans-serif;
   --font-mono: 'Roboto Mono Variable', ui-monospace, Consolas, monospace;
-  --success-color: #00BE13;
-  --processing-color: #E8BC38;
-  --error-color: #F83F23;
-  --disabled-color: #BBBBBB;
-  --border-primary: #BBBBBB;
-  --text-primary: #121212;
-  --text-secondary: #666666;
-  --bg-main: #F5F5F5;
-  --bg-secondary: #EBEBEB;
-  --bg-tertiary: #DDDDDD;
+
+  --color-success: #00BE13;     /* text-success, bg-success */
+  --color-processing: #E8BC38;  /* text-processing, bg-processing */
+  --color-error: #F83F23;       /* text-error, bg-error */
+  --color-disabled: #BBBBBB;    /* text-disabled, bg-disabled */
+
+  --color-border-primary: #BBBBBB; /* border-primary */
+
+  --color-text-primary: #121212;   /* text-primary */
+  --color-text-secondary: #666666; /* text-secondary */
+
+  --color-bg-main: #F5F5F5;        /* bg-main */
+  --color-bg-secondary: #EBEBEB;   /* bg-secondary */
+  --color-bg-tertiary: #DDDDDD;    /* bg-tertiary */
 }
+
 
 :root {
   --bg-main: #F5F5F5;
@@ -41,11 +46,15 @@
   --fs-small: 0.75rem;
   --fs-large: 1.5rem;
 
+  --fw-regular: 400;
+  --fw-medium: 600;
+
   --padding-base: 1.5rem;
   --padding-small: 0.5rem;
 
   font-family: var(--sans);
-  font-size: 1rem;
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
   line-height: 1.45;
   color-scheme: light;
   color: var(--text-primary);
@@ -99,9 +108,61 @@ input[type="text"] {
   border-color: var(--border-primary);
   border-style: solid;
   border-width: 1px;
-  border-radius: 0.5rem;
+  border-radius: 0.3rem;
   padding-inline: var(--padding-small);
   font-size: var(--fs-base);
   background-color: var(--bg-secondary);
+  height: 2rem;
   box-shadow: inset 0px 2px 2px rgba(0, 0, 0, 0.25);
+}
+
+select {
+  appearance: none;
+  border-color: var(--border-primary);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0.3rem;
+  padding-inline: var(--padding-small) 2rem;
+  font-family: inherit;
+  font-size: var(--fs-base);
+  height: 2rem;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
+  /* custom chevron, since appearance: none removes the native arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+select:disabled {
+  color: var(--text-secondary);
+  background-color: var(--bg-tertiary);
+}
+
+@layer base {
+  button[type="button"] {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1;
+    padding-inline: var(--padding-base);
+    border-color: var(--border-primary);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 0.5rem;
+    font-size: var(--fs-base);
+    height: 2rem;
+    background-color: var(--bg-main);
+  }
+}
+
+@layer components {
+  .button-large {
+    width: 20rem;
+    height: 5rem;
+    font-size: var(--fs-large);
+    font-weight: var(--fw-medium);
+    color: var(--bg-main);
+    border-style: none;
+  }
 }

@@ -29,6 +29,23 @@ export default function TempUIForStyling() {
       </section>
 
       <section>
+        <h2>select (dropdown)</h2>
+        <select defaultValue="b">
+          <option value="a">Option A</option>
+          <option value="b">Option B</option>
+          <option value="c">Option C</option>
+        </select>{' '}
+        <select disabled defaultValue="a">
+          <option value="a">Disabled</option>
+        </select>{' '}
+        <select defaultValue="">
+          <option value="" disabled>Select a project...</option>
+          <option value="p1">Project 1</option>
+          <option value="p2">Project 2</option>
+        </select>
+      </section>
+
+      <section>
         <h2>Status colors</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {['--success-color', '--processing-color', '--error-color', '--disabled-color'].map(swatch)}
@@ -72,6 +89,12 @@ export default function TempUIForStyling() {
           </div>
         </div>
       </section>
+
+      <button type="button" className="w-[12rem]">Check Quality</button>
+      <button type="button" className="w-[8rem]">Connect</button>
+      <button type="button" className="button-large bg-success">Start</button>
+      <button type="button" className="button-large bg-processing">Processing</button>
+      <button type="button" className="button-large bg-error">Stop</button>
     </main>
   )
 }
