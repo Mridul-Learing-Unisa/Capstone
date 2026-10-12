@@ -1,7 +1,7 @@
 export default function ConnectedIcon() {
     return (
         <svg className="w-[1.5rem] h-[1.5rem]" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="8.01924" cy="8.01924" r="8.01924" fill="#00BE13"/>
+            <circle cx="8.01924" cy="8.01924" r="8.01924" fill="var(--success-color)"/>
         </svg>
     )
 }

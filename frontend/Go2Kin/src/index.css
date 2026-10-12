@@ -6,6 +6,16 @@
 @theme {
   --font-sans: 'Inter Variable', system-ui, 'Segoe UI', sans-serif;
   --font-mono: 'Roboto Mono Variable', ui-monospace, Consolas, monospace;
+  --success-color: #00BE13;
+  --processing-color: #E8BC38;
+  --error-color: #F83F23;
+  --disabled-color: #BBBBBB;
+  --border-primary: #BBBBBB;
+  --text-primary: #121212;
+  --text-secondary: #666666;
+  --bg-main: #F5F5F5;
+  --bg-secondary: #EBEBEB;
+  --bg-tertiary: #DDDDDD;
 }
 
 :root {
