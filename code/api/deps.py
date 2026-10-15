@@ -26,13 +26,19 @@ def init_app_state(app: FastAPI) -> None:
     app.state.connected_cameras = {}   # serial -> GPcam instance, shared by cameras.py and calibration.py
     app.state.profile_manager = get_profile_manager()
     app.state.calibration_state = {
-        "status": "idle",   # idle, recording, downloading, processing, complete, error
+        "status": "idle",   # idle, recording, downloading, syncing, processing, complete, error
+        "stage": None,      # which step status/message refer to: intrinsic, extrinsic, origin
         "message": "",
-        "intrinsic_results": {},
+        "intrinsic_results": {},   # cam_num -> {"camera", "report", "serial"}
+        "intrinsic_videos": {},    # cam_num -> Path of the video to calibrate from
         "bundle": None,
         "camera_array": None,
+        "extrinsic_report": None,  # {"rmse", "n_cameras", "n_points", "level"}
+        "origin_set": False,
+        "loaded_file": None,       # name of the calibration file last loaded/applied
+        "sync_issue": None,        # populated when audio sync rejects an extrinsic recording
         "recording_info": None,
-        "charuco": None,
+        "charuco": None,           # active Charuco (saved config, or the one from a loaded calibration)
     }
     
     # Recording start information, used by the recording tab to track the current recording session.
