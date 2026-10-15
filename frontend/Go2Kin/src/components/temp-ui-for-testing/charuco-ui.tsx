@@ -23,9 +23,20 @@ function CharucoUI() {
     const [dictionaries, setDictionaries] = useState<string[]>([DEFAULT_CONFIG.dict_name])
     const [log, setLog] = useState('')
 
+    // On an error response keep the defaults: an error body is not a config/dictionary list.
     useEffect(() => {
-        fetch(API).then(r => r.json()).then(setConfig).catch(() => setLog('GET /charuco failed (API unreachable?)'))
-        fetch(API + '/dictionaries').then(r => r.json()).then(d => setDictionaries(d.dictionaries)).catch(() => { })
+        fetch(API)
+            .then(async r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`)
+                setConfig(await r.json())
+            })
+            .catch(e => setLog(`GET /api/calibration/charuco failed: ${e}`))
+        fetch(API + '/dictionaries')
+            .then(async r => {
+                const d = r.ok ? await r.json() : null
+                if (Array.isArray(d?.dictionaries) && d.dictionaries.length) setDictionaries(d.dictionaries)
+            })
+            .catch(() => { })
     }, [])
 
     function update<K extends keyof CharucoConfig>(key: K, value: CharucoConfig[K]) {
