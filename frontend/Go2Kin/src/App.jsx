@@ -4,6 +4,7 @@ import CameraUI from './components/temp-ui-for-testing/camera-ui'
 import CharucoUI from './components/temp-ui-for-testing/charuco-ui'
 import IntrinsicUI from './components/temp-ui-for-testing/intrinsic-ui'
 import ExtrinsicUI from './components/temp-ui-for-testing/extrinsic-ui'
+import SceneUI from './components/temp-ui-for-testing/scene-ui'
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <CharucoUI />
       <IntrinsicUI />
       <ExtrinsicUI />
+      <SceneUI />
     </main>
   )
 }
