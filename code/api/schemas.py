@@ -91,7 +91,21 @@ class CharucoConfig(BaseModel):
 class CalibExtrinsicData(BaseModel):
     cameras_used: List[str]
     sound_source: Optional[List[float]] = [0.0, 0.0, 0.0]
-    
+
+
+class CalibRecordRequest(BaseModel):
+    """Extrinsic / origin recording. cameras_used omitted = every connected camera (as in the tkinter tab)."""
+    cameras_used: Optional[List[str]] = None
+
+
+class IntrinsicCalibrateRequest(BaseModel):
+    """video_path omitted = the video just recorded for this camera. Give a path to use an existing video (tkinter "Browse")."""
+    video_path: Optional[str] = None
+
+
+class CalibrationLoadRequest(BaseModel):
+    name: str   # file stem from GET /api/calibration/files
+
 
 # Recording Tab schemas
 class RecordingStartRequest(BaseModel):
