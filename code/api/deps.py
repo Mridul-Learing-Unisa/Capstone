@@ -44,6 +44,8 @@ def init_app_state(app: FastAPI) -> None:
     
     app.state.recording_background_tasks = {}
 
+    app.state.preview_sessions = {}   # serial -> PreviewSession, owned by preview.py
+
     app.state.selection_state = {"project": None, "session": None, "subject_id": None}
 
 
@@ -69,6 +71,10 @@ def get_profile_manager_dep(request: Request):
 
 def get_calibration_state(request: Request) -> dict:
     return request.app.state.calibration_state
+
+
+def get_preview_sessions(request: Request) -> dict:
+    return request.app.state.preview_sessions
 
 
 # Recording Tab dependencies
