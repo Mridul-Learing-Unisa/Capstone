@@ -4,7 +4,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from goproUSB import GPcam
-from api.deps import get_app_config, get_connected_cameras, get_profile_manager_dep
+from api.deps import get_app_config, get_connected_cameras, get_preview_sessions, get_profile_manager_dep
+from api.routers.preview import stop_session
 from api.schemas import (
     GlobalSettings,
     ResolutionRequest,
@@ -153,7 +154,7 @@ def list_cameras(
 ):
     serials = app_config.get("gopro_serial_numbers", [])
     result = []
-    for s in serials:
+    for i, s in enumerate(serials):
         status = "disconnected"
         batt = None
         if s in connected_cameras:
@@ -166,7 +167,7 @@ def list_cameras(
                     status = "error"
             except Exception:
                 status = "error"
-        result.append({"serial": s, "status": status, "battery": batt})
+        result.append({"serial": s, "name": f"GoPro {i + 1}", "status": status, "battery": batt})
     return {"cameras": result}
 
 
@@ -231,7 +232,12 @@ def connect_camera(
 
 
 @router.post("/{serial}/disconnect")
-def disconnect_camera(serial: str, connected_cameras: dict = Depends(get_connected_cameras)):
+def disconnect_camera(
+    serial: str,
+    connected_cameras: dict = Depends(get_connected_cameras),
+    preview_sessions: dict = Depends(get_preview_sessions),
+):
+    stop_session(serial, preview_sessions)   # a running preview would otherwise outlive the connection
     if serial in connected_cameras:
         try:
             connected_cameras[serial].USBdisable()
