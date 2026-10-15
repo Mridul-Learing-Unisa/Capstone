@@ -2,6 +2,8 @@
 # state (config + ProjectManager), and registers every router.
 
 import sys
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +16,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "goproUSB"))
 from api.deps import init_app_state
 from api.routers import config, projects, cameras, recording, calibration, calibration_scene, preview
 
-app = FastAPI(title="Go2Kin API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Keep cameras alive for the whole server run (preview or not); release them on shutdown."""
+    stop = threading.Event()
+    cameras.start_keep_alive(app.state.connected_cameras, stop)
+    yield
+    stop.set()
+    cameras.disconnect_all(app.state.connected_cameras, app.state.preview_sessions)
+
+
+app = FastAPI(title="Go2Kin API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,6 +1,9 @@
-# Live preview endpoints. Each camera streams UDP on its own port; a background
+# Live preview endpoints. The camera streams UDP to port 8554; a background
 # thread reads it with OpenCV (as LivePreviewCapture does in the tkinter app) and
 # the latest frame is served to the browser as MJPEG, so React can use a plain <img>.
+# One camera at a time, like the tkinter Preview tab: the lab firewall rule only
+# opens UDP 8554 (docs/GoPro preview stream firewall config.md), and two cameras
+# can't share one port. Starting another camera's preview stops the current one.
 
 import threading
 import time
@@ -13,7 +16,7 @@ from api.deps import get_app_config, get_connected_cameras, get_preview_sessions
 
 router = APIRouter(prefix="/api/preview", tags=["preview"])
 
-BASE_PORT = 8554          # camera N (index in gopro_serial_numbers) streams on BASE_PORT + N
+PREVIEW_PORT = 8554       # the only port the firewall rule allows
 MAX_WIDTH = 1280          # frames are downscaled to this width before JPEG encoding
 JPEG_QUALITY = 80
 KEEP_ALIVE_S = 30
@@ -97,11 +100,9 @@ def stop_session(serial: str, sessions: dict) -> None:
         session.stop()
 
 
-def _port_for(serial: str, app_config: dict) -> int:
-    serials = app_config.get("gopro_serial_numbers", [])
-    if serial not in serials:
+def _ensure_known(serial: str, app_config: dict) -> None:
+    if serial not in app_config.get("gopro_serial_numbers", []):
         raise HTTPException(status_code=404, detail=f"Unknown camera {serial}")
-    return BASE_PORT + serials.index(serial)
 
 
 @router.get("")
@@ -118,13 +119,18 @@ def start_preview(
     sessions: dict = Depends(get_preview_sessions),
     profile_manager=Depends(get_profile_manager_dep),
 ):
-    port = _port_for(serial, app_config)
+    _ensure_known(serial, app_config)
     cam = connected_cameras.get(serial)
     if cam is None:
         raise HTTPException(status_code=404, detail=f"Camera {serial} is not connected")
     if serial in sessions:
         return {"status": "already_running", "serial": serial}
 
+    stopped = list(sessions)   # free port 8554: only one preview at a time
+    for other in stopped:
+        stop_session(other, sessions)
+
+    port = PREVIEW_PORT
     session = PreviewSession(serial, port, cam)
     try:
         # Preview forces Linear / 1080p / 30fps (low bandwidth, intentional), same as the tkinter app.
@@ -156,7 +162,7 @@ def start_preview(
 
     session.start_thread()
     sessions[serial] = session
-    return {"status": "started", "serial": serial, "port": port}
+    return {"status": "started", "serial": serial, "port": port, "stopped": stopped}
 
 
 @router.post("/{serial}/stop")
