@@ -24,11 +24,13 @@ from api.deps import (
     get_app_config,
     get_calibration_state,
     get_connected_cameras,
+    get_preview_sessions,
     get_profile_manager_dep,
     get_project_manager,
     get_recording_start_info,
     get_selection_state,
 )
+from api.routers.preview import stop_previews
 from api.schemas import (
     CalibRecordRequest,
     CalibrationLoadRequest,
@@ -303,6 +305,7 @@ def start_intrinsic_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     _ensure_idle(state)
     _ensure_not_trial_recording(recording_start_info)
@@ -310,6 +313,7 @@ def start_intrinsic_record(
     cam_num = _cam_num(serial, app_config)
     cam = _require_connected(serial, connected_cameras)
     video_dir = _temp_video_dir(pm, project)
+    stop_previews([serial], preview_sessions)   # restores the recording settings preview overrides
 
     try:
         _apply_saved_zoom(serial, cam, profile_manager)
@@ -434,6 +438,7 @@ def _start_multi_record(
     profile_manager,
     recording_start_info: dict,
     state: dict,
+    preview_sessions: dict,
 ) -> dict:
     _ensure_idle(state)
     _ensure_not_trial_recording(recording_start_info)
@@ -458,6 +463,7 @@ def _start_multi_record(
         raise HTTPException(status_code=400, detail="Run extrinsic calibration (or load a calibration) first")
 
     video_dir = _temp_video_dir(pm, project)
+    stop_previews(serials, preview_sessions)   # restores the recording settings preview overrides
 
     def start_one(serial):
         cam = connected_cameras[serial]
@@ -636,11 +642,12 @@ def start_extrinsic_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     """Start recording on all connected cameras (or body.cameras_used). The 5s countdown before this is the client's job."""
     return _start_multi_record(
         "extrinsic", body, pm, app_config, selection_state, connected_cameras,
-        profile_manager, recording_start_info, state,
+        profile_manager, recording_start_info, state, preview_sessions,
     )
 
 
@@ -664,10 +671,11 @@ def start_origin_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     return _start_multi_record(
         "origin", body, pm, app_config, selection_state, connected_cameras,
-        profile_manager, recording_start_info, state,
+        profile_manager, recording_start_info, state, preview_sessions,
     )
 
 
