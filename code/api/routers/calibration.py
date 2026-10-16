@@ -24,11 +24,13 @@ from api.deps import (
     get_app_config,
     get_calibration_state,
     get_connected_cameras,
+    get_preview_sessions,
     get_profile_manager_dep,
     get_project_manager,
     get_recording_start_info,
     get_selection_state,
 )
+from api.routers.preview import stop_previews
 from api.schemas import (
     CalibRecordRequest,
     CalibrationLoadRequest,
@@ -303,6 +305,7 @@ def start_intrinsic_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     _ensure_idle(state)
     _ensure_not_trial_recording(recording_start_info)
@@ -310,6 +313,7 @@ def start_intrinsic_record(
     cam_num = _cam_num(serial, app_config)
     cam = _require_connected(serial, connected_cameras)
     video_dir = _temp_video_dir(pm, project)
+    stop_previews([serial], preview_sessions)   # restores the recording settings preview overrides
 
     try:
         _apply_saved_zoom(serial, cam, profile_manager)
@@ -408,8 +412,20 @@ def calibrate_intrinsic(
     return {"status": "processing", "cam_num": cam_num}
 
 
+def _save_current_calibration(calib_dir: Path, state: dict, app_config: dict) -> Path:
+    """Save the current calibration as calibration_<timestamp>.json (+ Pose2Sim TOML) and make it last_calibration."""
+    from calibration.persistence import save_calibration
+    filepath = calib_dir / f"calibration_{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
+    save_calibration(filepath, state["camera_array"], _active_charuco(state))
+    # app_config is the same dict stored on app.state, so mutating it in place persists for the running app.
+    app_config["last_calibration"] = str(filepath)
+    save_app_config(app_config)
+    state["loaded_file"] = filepath.stem
+    return filepath
+
+
 # ---------------------------------------------------------------------------
-# Extrinsic / origin: record all cameras -> download -> sync -> calibrate
+# Extrinsic / origin: record all cameras -> download -> sync -> calibrate -> auto-apply
 # ---------------------------------------------------------------------------
 
 def _start_multi_record(
@@ -422,6 +438,7 @@ def _start_multi_record(
     profile_manager,
     recording_start_info: dict,
     state: dict,
+    preview_sessions: dict,
 ) -> dict:
     _ensure_idle(state)
     _ensure_not_trial_recording(recording_start_info)
@@ -446,6 +463,7 @@ def _start_multi_record(
         raise HTTPException(status_code=400, detail="Run extrinsic calibration (or load a calibration) first")
 
     video_dir = _temp_video_dir(pm, project)
+    stop_previews(serials, preview_sessions)   # restores the recording settings preview overrides
 
     def start_one(serial):
         cam = connected_cameras[serial]
@@ -545,7 +563,7 @@ def _sync_videos(info: dict, video_paths: list[str], state: dict, skip_sync: boo
     return sync_parent / "synced"
 
 
-def _process_extrinsic(info: dict, connected_cameras: dict, state: dict) -> None:
+def _process_extrinsic(info: dict, connected_cameras: dict, state: dict, app_config: dict) -> None:
     try:
         video_paths = _download_all(info, connected_cameras, state)
         synced_dir = _sync_videos(info, video_paths, state, skip_sync=False)
@@ -569,15 +587,16 @@ def _process_extrinsic(info: dict, connected_cameras: dict, state: dict) -> None
             "level": "green" if rmse < 1.0 else "amber" if rmse < 2.0 else "red",
         }
         _cleanup_temp_videos(Path(info["video_dir"]), "extrinsic", info["timestamp"])
+        saved = _save_current_calibration(Path(info["video_dir"]).parent, state, app_config)
         _set_state(
             state, "complete",
-            f"RMSE: {rmse:.3f}px | {report.n_cameras} cameras | {report.n_points} points",
+            f"RMSE: {rmse:.3f}px | {report.n_cameras} cameras | {report.n_points} points | Applied: {saved.name}",
         )
     except Exception as e:
         _set_state(state, "error", str(e))
 
 
-def _process_origin(info: dict, connected_cameras: dict, state: dict) -> None:
+def _process_origin(info: dict, connected_cameras: dict, state: dict, app_config: dict) -> None:
     try:
         video_paths = _download_all(info, connected_cameras, state)
         synced_dir = _sync_videos(info, video_paths, state, skip_sync=True)   # static board: no clap sync needed
@@ -598,17 +617,18 @@ def _process_origin(info: dict, connected_cameras: dict, state: dict) -> None:
 
         state["origin_set"] = True
         _cleanup_temp_videos(Path(info["video_dir"]), "origin", info["timestamp"])
-        _set_state(state, "complete", "Origin set successfully")
+        saved = _save_current_calibration(Path(info["video_dir"]).parent, state, app_config)
+        _set_state(state, "complete", f"Origin set | Applied: {saved.name}")
     except Exception as e:
         _set_state(state, "error", str(e))
 
 
-def _stop_multi_record(kind: str, target, connected_cameras: dict, state: dict) -> dict:
+def _stop_multi_record(kind: str, target, connected_cameras: dict, state: dict, app_config: dict) -> dict:
     info = state["recording_info"] or {}
     if state["status"] != "recording" or info.get("type") != kind:
         raise HTTPException(status_code=400, detail=f"Not recording {kind}")
     _set_state(state, "downloading", "Stopping cameras...")
-    threading.Thread(target=target, args=(info, connected_cameras, state), daemon=True).start()
+    threading.Thread(target=target, args=(info, connected_cameras, state, app_config), daemon=True).start()
     return {"status": "downloading"}
 
 
@@ -622,20 +642,23 @@ def start_extrinsic_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     """Start recording on all connected cameras (or body.cameras_used). The 5s countdown before this is the client's job."""
     return _start_multi_record(
         "extrinsic", body, pm, app_config, selection_state, connected_cameras,
-        profile_manager, recording_start_info, state,
+        profile_manager, recording_start_info, state, preview_sessions,
     )
 
 
 @router.post("/extrinsic/record/stop")
 def stop_extrinsic_record(
     connected_cameras: dict = Depends(get_connected_cameras),
+    app_config: dict = Depends(get_app_config),
     state: dict = Depends(get_calibration_state),
 ):
-    return _stop_multi_record("extrinsic", _process_extrinsic, connected_cameras, state)
+    """Stop, then download -> sync -> calibrate -> save in the background (auto-apply, no separate /apply call)."""
+    return _stop_multi_record("extrinsic", _process_extrinsic, connected_cameras, state, app_config)
 
 
 @router.post("/origin/record/start")
@@ -648,19 +671,22 @@ def start_origin_record(
     profile_manager=Depends(get_profile_manager_dep),
     recording_start_info: dict = Depends(get_recording_start_info),
     state: dict = Depends(get_calibration_state),
+    preview_sessions: dict = Depends(get_preview_sessions),
 ):
     return _start_multi_record(
         "origin", body, pm, app_config, selection_state, connected_cameras,
-        profile_manager, recording_start_info, state,
+        profile_manager, recording_start_info, state, preview_sessions,
     )
 
 
 @router.post("/origin/record/stop")
 def stop_origin_record(
     connected_cameras: dict = Depends(get_connected_cameras),
+    app_config: dict = Depends(get_app_config),
     state: dict = Depends(get_calibration_state),
 ):
-    return _stop_multi_record("origin", _process_origin, connected_cameras, state)
+    """Stop, then download -> sync -> calibrate -> save in the background (auto-apply, no separate /apply call)."""
+    return _stop_multi_record("origin", _process_origin, connected_cameras, state, app_config)
 
 
 # ---------------------------------------------------------------------------
@@ -674,26 +700,16 @@ def apply_calibration(
     selection_state: dict = Depends(get_selection_state),
     state: dict = Depends(get_calibration_state),
 ):
-    """Save the current calibration as [project]/calibrations/calibration_<timestamp>.json (+ Pose2Sim TOML)."""
+    """Manually re-save the current calibration. Extrinsic and origin already save automatically on success."""
     _ensure_idle(state)
     if not _has_extrinsics(state):
         raise HTTPException(status_code=400, detail="No extrinsic calibration to apply")
-    project = _current_project(selection_state, app_config)
-    calib_dir = _calibrations_dir(pm, project)
-
-    filename = f"calibration_{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M')}.json"
-    filepath = calib_dir / filename
+    calib_dir = _calibrations_dir(pm, _current_project(selection_state, app_config))
     try:
-        from calibration.persistence import save_calibration
-        save_calibration(filepath, state["camera_array"], _active_charuco(state))
+        filepath = _save_current_calibration(calib_dir, state, app_config)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save: {e}")
-
-    # app_config is the same dict stored on app.state, so mutating it in place persists for the running app.
-    app_config["last_calibration"] = str(filepath)
-    save_app_config(app_config)
-    state["loaded_file"] = filepath.stem
-    return {"status": "success", "filename": filename, "filepath": str(filepath)}
+    return {"status": "success", "filename": filepath.name, "filepath": str(filepath)}
 
 
 @router.get("/files")
