@@ -149,13 +149,13 @@ function ExtrinsicUI() {
             </div>
 
             <div>
-                {button('extrinsic', 'Start calibration', !!status?.can_extrinsic)}{' '}
+                {button('extrinsic', 'Start calibration', !status?.can_extrinsic)}{' '}
                 <span style={{ color: indicator('extrinsic') }}>●</span> {stageText('extrinsic')}
                 <div style={{ color: '#666' }}>Tip: clap near the centre of the camera volume</div>
             </div>
 
             <div>
-                {button('origin', 'Set origin', !!status?.can_origin)}{' '}
+                {button('origin', 'Set origin', !status?.can_origin)}{' '}
                 <span style={{ color: indicator('origin') }}>●</span> {stageText('origin')}
             </div>
 

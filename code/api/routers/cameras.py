@@ -383,6 +383,7 @@ def get_camera_info(serial: str, connected_cameras: dict = Depends(get_connected
     res = cam.getCameraInfo()
     if res.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to read camera info")
+
     return res.json()
 
 

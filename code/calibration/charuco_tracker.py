@@ -71,8 +71,9 @@ class CharucoTracker:
             except Exception as e:
                 logger.debug(f"Sub pixel detection failed: {e}")
 
-            ids = _ids[:, 0]
-            img_loc = _img_loc[:, 0]
+            # OpenCV 4 returns (N,1)/(N,1,2), OpenCV 5 returns (N,)/(N,2) — flatten to handle both
+            ids = np.asarray(_ids).reshape(-1)
+            img_loc = np.asarray(_img_loc).reshape(-1, 2)
 
             frame_width = gray_frame.shape[1]
             if mirror:
