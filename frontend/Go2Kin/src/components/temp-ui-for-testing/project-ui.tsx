@@ -7,8 +7,9 @@ function ProjectUI() {
     const [project, setProject] = useState('')
     const [session, setSession] = useState('')
     const [trial, setTrial] = useState('')
-    const [subject, setSubject] = useState<Record<string, string | number>>({
-        subject_id: '', initials: '', age: 25, sex: 'M', height_m: 1.75, mass_kg: 70, notes: '',
+    // Kept as typed strings; converted on save so a cleared number field is rejected instead of sent as 0.
+    const [subject, setSubject] = useState<Record<string, string>>({
+        subject_id: '', initials: '', age: '25', sex: 'M', height_m: '1.75', mass_kg: '70', notes: '',
     })
     const [log, setLog] = useState('')
 
@@ -24,7 +25,14 @@ function ProjectUI() {
         }
     }
 
-    useEffect(() => { refreshSelection() }, [])
+    // Start from the server's selection (restored from the last session, like tkinter).
+    useEffect(() => {
+        fetch(API + '/selection').then(r => r.json()).then(sel => {
+            setSelection(sel)
+            if (sel.project) setProject(sel.project)
+            if (sel.session) setSession(sel.session)
+        }).catch(() => setSelection(null))
+    }, [])
 
     // Dropdown options: existing projects / sessions / trials / subjects
     const [projects, setProjects] = useState<string[]>([])
@@ -62,7 +70,16 @@ function ProjectUI() {
     // Picking an existing subject fills in the rest of the form
     function onSubjectIdChange(value: string) {
         const existing = subjects.find(x => x.subject_id === value)
-        setSubject(existing ? { ...subject, ...existing } : { ...subject, subject_id: value })
+        setSubject(existing
+            ? Object.fromEntries(Object.entries({ ...subject, ...existing }).map(([k, v]) => [k, String(v ?? '')]))
+            : { ...subject, subject_id: value })
+    }
+
+    // Empty number fields become null so the API rejects them (422) rather than storing 0.
+    function subjectBody() {
+        const num = (v: string) => v.trim() === '' ? null : Number(v)
+        const { subject_id, initials, sex, notes, age, height_m, mass_kg } = subject
+        return { subject_id, initials, sex, notes, age: num(age), height_m: num(height_m), mass_kg: num(mass_kg) }
     }
 
     async function call(method: string, path: string, body?: unknown) {
@@ -135,15 +152,19 @@ function ProjectUI() {
                             list={k === 'subject_id' ? 'subjects-list' : undefined}
                             value={subject[k]}
                             size={k === 'notes' ? 15 : 6}
-                            onChange={e => k === 'subject_id' ? onSubjectIdChange(e.target.value) : setSubject({
-                                ...subject,
-                                [k]: ['age', 'height_m', 'mass_kg'].includes(k) ? Number(e.target.value) : e.target.value,
-                            })}
+                            onChange={e => k === 'subject_id'
+                                ? onSubjectIdChange(e.target.value)
+                                : setSubject({ ...subject, [k]: e.target.value })}
                         />
                     </label>
                 ))}
                 <datalist id="subjects-list">{subjects.map(x => <option key={String(x.subject_id)} value={String(x.subject_id)} />)}</datalist>
-                <button onClick={() => call('POST', `/${p}/subjects`, subject)}>Save subject</button>
+                {' '}sex: M / F / Other{' '}
+                <button onClick={() => call('POST', `/${p}/subjects`, subjectBody())}>Create subject</button>
+                <button onClick={() => {
+                    const { subject_id, ...rest } = subjectBody()
+                    call('PUT', `/${p}/subjects/${encodeURIComponent(subject_id)}`, rest)
+                }}>Update subject</button>
                 <button onClick={() => call('POST', '/selection', { subject_id: subject.subject_id || null })}>Select subject</button>
             </div>
 

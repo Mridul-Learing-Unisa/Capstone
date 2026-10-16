@@ -52,7 +52,26 @@ def init_app_state(app: FastAPI) -> None:
 
     app.state.preview_sessions = {}   # serial -> PreviewSession, owned by preview.py
 
-    app.state.selection_state = {"project": None, "session": None, "subject_id": None}
+    app.state.selection_state = restore_selection(app.state.pm, config)
+
+
+def restore_selection(pm: ProjectManager, config: dict) -> dict:
+    """Last project/session/participant from the config, as the tkinter TopBar restores them.
+    Each is kept only if it still exists (and the session/participant only if the project does)."""
+    selection = {"project": None, "session": None, "subject_id": None}
+    project = config.get("last_project", "")
+    if not project or project not in pm.list_projects():
+        return selection
+    selection["project"] = project
+    try:
+        if config.get("last_session", "") in pm.list_sessions(project):
+            selection["session"] = config["last_session"]
+        participant = config.get("last_participant", "")
+        if participant and any(s["subject_id"] == participant for s in pm.list_subjects(project)):
+            selection["subject_id"] = participant
+    except Exception as e:
+        print(f"Could not fully restore last selection: {e}")
+    return selection
 
 
 def get_selection_state(request: Request) -> dict:
