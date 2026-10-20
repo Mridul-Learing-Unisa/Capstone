@@ -9,7 +9,10 @@ Requires: ffmpeg (in PATH), numpy, scipy
 
 import io
 import math
+import os
+import shutil
 import subprocess
+import sys
 import time
 import wave
 from concurrent.futures import ThreadPoolExecutor
@@ -18,6 +21,15 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from scipy.signal import hilbert
+
+
+# Conda only puts <env>\Library\bin on PATH when the env is activated. When the app is
+# launched with the env's python.exe directly (e.g. from an IDE), ffmpeg isn't found —
+# fall back to the running env's Library\bin.
+if shutil.which("ffmpeg") is None:
+    _conda_bin = Path(sys.prefix) / "Library" / "bin"
+    if (_conda_bin / "ffmpeg.exe").exists():
+        os.environ["PATH"] = str(_conda_bin) + os.pathsep + os.environ.get("PATH", "")
 
 
 SAMPLE_RATE = 48000  # GoPro native AAC rate
@@ -69,7 +81,7 @@ def check_ffmpeg(ffmpeg_path: str = "ffmpeg") -> bool:
             capture_output=True, timeout=5
         )
         return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
         return False
 
 

@@ -379,6 +379,8 @@ def _run_pose2sim_trial(data_root: str, project: str, session: str, trial_name: 
             sys.path.insert(0, str(pose2sim_path))
 
         from Pose2Sim import Pose2Sim as P2S
+        from pose2sim_builder import patch_pose2sim
+        patch_pose2sim()
 
         steps = [
             P2S.calibration,

@@ -259,6 +259,8 @@ class ProcessingTab:
                 sys.path.insert(0, pose2sim_path)
 
             from Pose2Sim import Pose2Sim as P2S
+            from pose2sim_builder import patch_pose2sim
+            patch_pose2sim()
 
             steps = [
                 ("Calibration", P2S.calibration),

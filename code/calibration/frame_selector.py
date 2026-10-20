@@ -38,6 +38,21 @@ _POSE_ASPECT_RATIO = 4
 _NUM_TILT_DIRECTION_BINS = 8
 MIN_TILT_FOR_DIVERSITY = 0.1
 
+# Ratio of the two singular values of the centred board-plane points. Below this the
+# corners are (nearly) collinear and cv2.calibrateCamera cannot fit a homography.
+MIN_SPREAD_RATIO = 0.1
+
+
+def is_planar_frame_valid(obj_xy: np.ndarray) -> bool:
+    """Return False if board-plane corner positions are collinear or coincident."""
+    obj_xy = np.asarray(obj_xy, dtype=np.float64)
+    if len(obj_xy) < 4:
+        return False
+    s = np.linalg.svd(obj_xy - obj_xy.mean(axis=0), compute_uv=False)
+    if s[0] <= 1e-12:
+        return False
+    return bool(s[1] / s[0] >= MIN_SPREAD_RATIO)
+
 
 @dataclass(frozen=True)
 class FrameCoverageData:
@@ -133,8 +148,11 @@ def _filter_eligible_frames(cam_df: pd.DataFrame, min_corners: int) -> list[int]
     for sync_index_key, frame_group in grouped:
         frame_df = cast(pd.DataFrame, frame_group)
         sync_index = int(sync_index_key)
-        if len(frame_df) >= min_corners:
-            eligible.append(sync_index)
+        if len(frame_df) < min_corners:
+            continue
+        if not is_planar_frame_valid(frame_df[["obj_loc_x", "obj_loc_y"]].to_numpy()):
+            continue
+        eligible.append(sync_index)
     return sorted(eligible)
 
 
