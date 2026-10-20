@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Depends
 from go2kin import load_app_config, save_app_config
 from project_manager import ProjectManager
 from camera_profiles import get_profile_manager
+from api.processing_job import ProcessingJob
 
 
 def init_app_state(app: FastAPI) -> None:
@@ -51,6 +52,8 @@ def init_app_state(app: FastAPI) -> None:
     app.state.recording_background_tasks = {}
 
     app.state.preview_sessions = {}   # serial -> PreviewSession, owned by preview.py
+
+    app.state.processing_job = ProcessingJob()   # Pose2Sim run state, owned by processing.py
 
     app.state.selection_state = restore_selection(app.state.pm, config)
 
@@ -100,6 +103,10 @@ def get_calibration_state(request: Request) -> dict:
 
 def get_preview_sessions(request: Request) -> dict:
     return request.app.state.preview_sessions
+
+
+def get_processing_job(request: Request) -> ProcessingJob:
+    return request.app.state.processing_job
 
 
 # Recording Tab dependencies

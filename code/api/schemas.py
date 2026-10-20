@@ -134,3 +134,9 @@ class RecordingStartRequest(BaseModel):
         max_length=3,
     )
 
+# Processing Tab schemas
+class ProcessingStartRequest(BaseModel):
+    """Trial folders to run through Pose2Sim, absolute or relative to data_root
+    (e.g. "MyProject/sessions/2026-10-19/trial_001")."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+    trial_paths: List[str] = Field(min_length=1)
