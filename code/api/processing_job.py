@@ -150,6 +150,11 @@ class ProcessingJob:
 
     # ------------------------------------------------------------------ public API
 
+    @property
+    def state(self) -> str:
+        with self._lock:
+            return self._state
+
     def start(self, pm, trials) -> str:
         """Begin processing `trials` (list of TrialRef). Raises ProcessingBusy if already running."""
         with self._lock:
@@ -176,7 +181,8 @@ class ProcessingJob:
         Returns False if nothing is running. Repeated calls while stopping are harmless."""
         with self._lock:
             if self._state not in ACTIVE_STATES:
-                return False
+                # A repeat that arrives after the stopped run has already wound down is still fine.
+                return self._state == "cancelled" and self._stop_event.is_set()
             already = self._stop_event.is_set()
             self._stop_event.set()
             self._state = "stopping"

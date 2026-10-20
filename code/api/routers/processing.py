@@ -48,7 +48,7 @@ def stop_processing(job=Depends(get_processing_job)):
     while it is stopping is harmless."""
     if not job.stop():
         raise HTTPException(status_code=409, detail="No processing run is active.")
-    return {"message": "Stop requested", "state": "stopping"}
+    return {"message": "Stop requested", "state": job.state}   # "stopping", or "cancelled" if already gone
 
 
 @router.get("/status")
