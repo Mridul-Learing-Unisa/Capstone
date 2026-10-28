@@ -28,6 +28,35 @@ _VIDEO_CAM_RE = re.compile(r"_GP(\d+)\.(?:mp4|MP4)$")
 _TOML_SECTION_RE = re.compile(r"^\[([A-Za-z0-9_]+)\]\s*$")
 
 
+def patch_pose2sim():
+    """Work around a Pose2Sim multi-person triangulation crash.
+
+    Pose2Sim (submodule commit 491d564) returns an empty frames_since_last_seen
+    after a frame with nobody detected, but triangulate_all then pads Q_old for
+    the next person who appears, so sort_people_sports2d fails with
+    "could not broadcast input array from shape (0,) into shape (1,)".
+    Resize the counter to match the number of previous persons. Call after
+    Pose2Sim is on sys.path; safe to call more than once.
+    """
+    import numpy as np
+    import Pose2Sim.triangulation as p2s_triangulation
+
+    original = p2s_triangulation.sort_people_sports2d
+    if getattr(original, "_go2kin_patched", False):
+        return
+
+    def sort_people_sports2d(keyptpre, keypt, *args, frames_since_last_seen=None, **kwargs):
+        if frames_since_last_seen is not None and len(frames_since_last_seen) != len(keyptpre):
+            resized = np.zeros(len(keyptpre), dtype=int)
+            n = min(len(keyptpre), len(frames_since_last_seen))
+            resized[:n] = frames_since_last_seen[:n]
+            frames_since_last_seen = resized
+        return original(keyptpre, keypt, *args, frames_since_last_seen=frames_since_last_seen, **kwargs)
+
+    sort_people_sports2d._go2kin_patched = True
+    p2s_triangulation.sort_people_sports2d = sort_people_sports2d
+
+
 def _natural_sort_key(s):
     """Match Pose2Sim's common.natural_sort_key (used by its video glob)."""
     return [int(c) if c.isdigit() else c.lower()

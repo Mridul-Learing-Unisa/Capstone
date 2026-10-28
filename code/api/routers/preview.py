@@ -1,6 +1,11 @@
-# Live preview endpoints. Each camera streams UDP on its own port; a background
+# Live preview endpoints. The camera streams UDP to port 8554; a background
 # thread reads it with OpenCV (as LivePreviewCapture does in the tkinter app) and
 # the latest frame is served to the browser as MJPEG, so React can use a plain <img>.
+# One camera at a time, like the tkinter Preview tab: the lab firewall rule only
+# opens UDP 8554 (docs/GoPro preview stream firewall config.md), and two cameras
+# can't share one port. Starting another camera's preview stops the current one.
+# Preview forces 1080p / 30fps / Linear; stopping it restores the camera's previous
+# resolution, FPS, lens and zoom so later recordings aren't made at preview settings.
 
 import threading
 import time
@@ -13,10 +18,11 @@ from api.deps import get_app_config, get_connected_cameras, get_preview_sessions
 
 router = APIRouter(prefix="/api/preview", tags=["preview"])
 
-BASE_PORT = 8554          # camera N (index in gopro_serial_numbers) streams on BASE_PORT + N
+PREVIEW_PORT = 8554       # the only port the firewall rule allows
 MAX_WIDTH = 1280          # frames are downscaled to this width before JPEG encoding
 JPEG_QUALITY = 80
 KEEP_ALIVE_S = 30
+RESTORE_SETTINGS = ("121", "2", "3")   # lens, resolution, fps: the ones preview overrides (res before fps)
 
 
 class PreviewSession:
@@ -32,6 +38,8 @@ class PreviewSession:
         self.latest_jpeg = None
         self.frame_id = 0
         self.cond = threading.Condition()
+        self.restore = {}       # setting id -> option the camera had before preview
+        self.profile_manager = None   # to read the zoom saved at stop time (it can change during preview)
 
     def open_capture(self) -> bool:
         stream_url = f"udp://0.0.0.0:{self.port}"
@@ -86,8 +94,27 @@ class PreviewSession:
             self.cam.streamStop()
         except Exception as e:
             print(f"Error stopping camera stream for {self.serial}: {e}")
+        self._restore_settings()
         with self.cond:
             self.cond.notify_all()   # wake any MJPEG generators so they exit
+
+
+    def _restore_settings(self) -> None:
+        """Put back the recording settings preview replaced; resolution changes reset zoom, so re-apply it last."""
+        for setting_id in RESTORE_SETTINGS:
+            if setting_id in self.restore:
+                try:
+                    self.cam.setSetting(int(setting_id), self.restore[setting_id])
+                    time.sleep(0.3)
+                except Exception as e:
+                    print(f"Could not restore setting {setting_id} on {self.serial}: {e}")
+        if self.restore and self.profile_manager is not None:
+            try:
+                zoom = (self.profile_manager.load_camera_profile(self.serial) or {}).get("current_zoom", 0)
+                if zoom:
+                    self.cam.setDigitalZoom(zoom)
+            except Exception:
+                pass
 
 
 def stop_session(serial: str, sessions: dict) -> None:
@@ -97,11 +124,15 @@ def stop_session(serial: str, sessions: dict) -> None:
         session.stop()
 
 
-def _port_for(serial: str, app_config: dict) -> int:
-    serials = app_config.get("gopro_serial_numbers", [])
-    if serial not in serials:
+def stop_previews(serials, sessions: dict) -> None:
+    """Stop (and restore settings on) any preview running on these cameras. Called before recording."""
+    for serial in list(serials):
+        stop_session(serial, sessions)
+
+
+def _ensure_known(serial: str, app_config: dict) -> None:
+    if serial not in app_config.get("gopro_serial_numbers", []):
         raise HTTPException(status_code=404, detail=f"Unknown camera {serial}")
-    return BASE_PORT + serials.index(serial)
 
 
 @router.get("")
@@ -118,15 +149,27 @@ def start_preview(
     sessions: dict = Depends(get_preview_sessions),
     profile_manager=Depends(get_profile_manager_dep),
 ):
-    port = _port_for(serial, app_config)
+    _ensure_known(serial, app_config)
     cam = connected_cameras.get(serial)
     if cam is None:
         raise HTTPException(status_code=404, detail=f"Camera {serial} is not connected")
     if serial in sessions:
         return {"status": "already_running", "serial": serial}
 
+    stopped = list(sessions)   # free port 8554: only one preview at a time
+    for other in stopped:
+        stop_session(other, sessions)
+
+    port = PREVIEW_PORT
     session = PreviewSession(serial, port, cam)
+    session.profile_manager = profile_manager
     try:
+        # Remember the recording settings so stop() can restore them.
+        state_res = cam.getState()
+        if state_res.status_code == 200:
+            current = state_res.json().get("settings", {})
+            session.restore = {sid: current[sid] for sid in RESTORE_SETTINGS if sid in current}
+
         # Preview forces Linear / 1080p / 30fps (low bandwidth, intentional), same as the tkinter app.
         cam.modeVideo()
         cam.setVideoLensesLinear()
@@ -156,7 +199,7 @@ def start_preview(
 
     session.start_thread()
     sessions[serial] = session
-    return {"status": "started", "serial": serial, "port": port}
+    return {"status": "started", "serial": serial, "port": port, "stopped": stopped}
 
 
 @router.post("/{serial}/stop")

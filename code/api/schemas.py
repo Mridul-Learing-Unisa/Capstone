@@ -1,7 +1,7 @@
 # Pydantic request/response models shared across routers (config updates, project/session creation, subject data).
 
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal, Optional, List
 
 
 
@@ -19,11 +19,15 @@ class SelectionUpdate(BaseModel):
     subject_id: Optional[str] = None
 
 
+# Names are trimmed like the tkinter dialogs do (name.strip()); a padded name would
+# otherwise create a folder Windows can't reopen ("  x  " -> "  x").
 class ProjectCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     name: str
 
 
 class SessionCreate(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     name: str
 
 
@@ -36,13 +40,27 @@ class TrialUpdate(BaseModel):
 
 
 class SubjectData(BaseModel):
-    subject_id: str
-    initials: str
-    age: int
-    sex: str
-    height_m: float
-    mass_kg: float
+    """Same rules as the tkinter New Participant dialog: ID and initials required,
+    whole-number age, numeric height/mass, sex M/F/Other."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+    subject_id: str = Field(min_length=1)
+    initials: str = Field(min_length=1)
+    age: int = Field(ge=0, le=120)
+    sex: Literal["M", "F", "Other"]
+    height_m: float = Field(gt=0, le=3)
+    mass_kg: float = Field(gt=0, le=500)
     notes: str = ""
+
+
+class SubjectUpdate(BaseModel):
+    """Partial edit of an existing subject; omitted fields are left unchanged."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+    initials: Optional[str] = Field(default=None, min_length=1)
+    age: Optional[int] = Field(default=None, ge=0, le=120)
+    sex: Optional[Literal["M", "F", "Other"]] = None
+    height_m: Optional[float] = Field(default=None, gt=0, le=3)
+    mass_kg: Optional[float] = Field(default=None, gt=0, le=500)
+    notes: Optional[str] = None
 
 
 class GlobalSettings(BaseModel):
@@ -116,3 +134,9 @@ class RecordingStartRequest(BaseModel):
         max_length=3,
     )
 
+# Processing Tab schemas
+class ProcessingStartRequest(BaseModel):
+    """Trial folders to run through Pose2Sim, absolute or relative to data_root
+    (e.g. "MyProject/sessions/2026-10-19/trial_001")."""
+    model_config = ConfigDict(str_strip_whitespace=True)
+    trial_paths: List[str] = Field(min_length=1)

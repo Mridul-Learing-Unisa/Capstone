@@ -15,7 +15,11 @@ import numpy as np
 from numpy.typing import NDArray
 
 from calibration.data_types import CameraData, ImagePoints
-from calibration.frame_selector import IntrinsicCoverageReport, select_calibration_frames
+from calibration.frame_selector import (
+    IntrinsicCoverageReport,
+    is_planar_frame_valid,
+    select_calibration_frames,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +118,10 @@ def _extract_calibration_arrays(
         img_loc: NDArray = np.asarray(frame_df[["img_loc_x", "img_loc_y"]])
         obj_loc: NDArray = np.asarray(frame_df[["obj_loc_x", "obj_loc_y", "obj_loc_z"]])
         obj_loc = np.nan_to_num(obj_loc, nan=0.0)
+
+        if not is_planar_frame_valid(obj_loc[:, :2]):
+            logger.debug(f"Skipping frame {sync_index} for cam_id {cam_id}: corners are collinear")
+            continue
 
         obj_points_list.append(obj_loc)
         img_points_list.append(img_loc)

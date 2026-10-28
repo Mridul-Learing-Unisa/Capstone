@@ -2,6 +2,8 @@
 # state (config + ProjectManager), and registers every router.
 
 import sys
+import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,9 +14,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "goproUSB"))
 
 from api.deps import init_app_state
-from api.routers import config, projects, cameras, recording, calibration, calibration_scene, preview
+from api.routers import config, projects, cameras, recording, calibration, calibration_scene, preview, processing
 
-app = FastAPI(title="Go2Kin API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Keep cameras alive for the whole server run (preview or not); release them on shutdown."""
+    stop = threading.Event()
+    cameras.start_keep_alive(app.state.connected_cameras, stop)
+    yield
+    app.state.processing_job.shutdown()   # don't leave a Pose2Sim run orphaned
+    stop.set()
+    cameras.disconnect_all(app.state.connected_cameras, app.state.preview_sessions)
+
+
+app = FastAPI(title="Go2Kin API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,7 +46,7 @@ app.include_router(calibration.router)
 app.include_router(cameras.router)
 app.include_router(recording.router)
 app.include_router(calibration_scene.router)
-# app.include_router(processing.router)
+app.include_router(processing.router)
 app.include_router(preview.router)
 
 if __name__ == "__main__":

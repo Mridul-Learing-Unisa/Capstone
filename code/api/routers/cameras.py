@@ -1,5 +1,12 @@
 # Endpoints for managing cameras (listing, connecting, disconnecting,
 # and applying resolution / fps / lens / zoom / mode settings).
+# Cameras stay connected until the server shuts down: a keep-alive thread
+# (start_keep_alive, run from main.py's lifespan) pings them every 30s, as the
+# tkinter status monitor does, and disconnect_all() releases them on shutdown.
+
+import concurrent.futures
+import threading
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -23,6 +30,27 @@ router = APIRouter(prefix="/api/cameras", tags=["cameras"])
 SETTING_RESOLUTION = 2
 SETTING_FPS = 3
 SETTING_VIDEO_LENS = 121
+
+KEEP_ALIVE_INTERVAL_S = 30
+
+# Applied on every connect so all cameras record with the same research configuration
+# (same list as the tkinter connect_camera). (setting_id, option_id, name, value)
+SETTINGS_ON_CONNECT = [
+    (175, 1, "Control Mode", "Pro"),
+    (121, 4, "Lens", "Linear"),
+    (83, 0, "GPS", "Off"),
+    (167, 4, "Hindsight", "Off"),
+    (135, 0, "Hypersmooth", "Off"),
+    (88, 30, "LCD Brightness", "30%"),
+    (134, 3, "Anti-Flicker", "50Hz"),   # Australia; the Res/FPS options assume 50Hz
+    (182, 1, "Bit Rate", "High"),
+    (183, 0, "Bit Depth", "8-Bit"),
+    (184, 0, "Profiles", "Standard"),
+    (236, 0, "Auto WiFi AP", "Off"),
+]
+
+# Restored from the saved profile so recording settings survive camera power-cycles.
+CRITICAL_SETTINGS = [("2", "Video Resolution"), ("3", "Frames Per Second"), ("121", "Video Lens")]
 
 _MODE_FUNCS = {
     "video": "modeVideo",
@@ -171,64 +199,128 @@ def list_cameras(
     return {"cameras": result}
 
 
+def _connect_one(serial: str, profile_manager) -> tuple[GPcam, list[str]]:
+    """Connect and configure one camera, mirroring the tkinter connect_camera.
+    Returns the camera and any non-fatal warnings; raises on failure."""
+    warnings = []
+    cam = GPcam(serial)
+
+    if cam.USBenable().status_code != 200:
+        raise RuntimeError("Failed to enable USB control")
+    time.sleep(1)
+    if cam.keepAlive().status_code != 200:
+        raise RuntimeError("Camera not responding to keep-alive")
+
+    info_res = cam.getCameraInfo()
+    if info_res.status_code != 200:
+        raise RuntimeError("Failed to get camera info")
+    cam_info = info_res.json()
+    model, firmware = cam_info.get("model_name", ""), cam_info.get("firmware_version", "")
+
+    existing = profile_manager.load_camera_profile(serial) or {}
+    saved_zoom = existing.get("current_zoom", 0) or 0
+    reference = profile_manager.load_settings_reference(model, firmware)
+    if reference is None:
+        warnings.append(f"No settings reference for {model} {firmware}; "
+                        f"run tools/discover_camera_settings.py {serial}")
+
+    # Video mode first so the video settings below are available.
+    cam.modeVideo()
+    time.sleep(1)
+
+    current = {}
+    state_res = cam.getState()
+    if state_res.status_code == 200:
+        current = state_res.json().get("settings", {})
+        for setting_id, option_id, name, value in SETTINGS_ON_CONNECT:
+            if current.get(str(setting_id)) != option_id:
+                if cam.setSetting(setting_id, option_id).status_code != 200:
+                    warnings.append(f"Could not set {name} to {value}")
+                time.sleep(0.3)
+    else:
+        warnings.append("Could not read state; research settings not applied")
+
+    try:
+        if cam.setDateTimeNow().status_code != 200:
+            warnings.append("Failed to sync date/time")
+    except Exception as e:
+        warnings.append(f"Failed to sync date/time: {e}")
+
+    for setting_id, name in CRITICAL_SETTINGS:
+        saved = existing.get("current_settings", {}).get(setting_id)
+        if saved and current.get(setting_id) != saved.get("value"):
+            if cam.setSetting(int(setting_id), saved["value"]).status_code != 200:
+                warnings.append(f"Could not restore {name} to {saved.get('value_name')}")
+            time.sleep(0.3)
+
+    state_res = cam.getState()
+    if state_res.status_code != 200:
+        raise RuntimeError("Failed to get camera state")
+    state = state_res.json()
+
+    current_zoom = state.get("status", {}).get("75", 0)
+    if saved_zoom > 0 and saved_zoom != current_zoom:
+        try:
+            if cam.setDigitalZoom(saved_zoom).status_code == 200:
+                current_zoom = saved_zoom
+            else:
+                warnings.append("Failed to restore zoom")
+        except Exception as e:
+            warnings.append(f"Failed to restore zoom: {e}")
+
+    if reference is not None:
+        try:
+            profile = profile_manager.create_or_update_profile(cam_info, state, reference)
+            profile["current_zoom"] = current_zoom
+            profile_manager.save_camera_profile(serial, profile)
+        except Exception as e:
+            warnings.append(f"Profile update failed: {e}")
+
+    return cam, warnings
+
+
 @router.post("/connect-all")
 def connect_all(
     app_config: dict = Depends(get_app_config),
     connected_cameras: dict = Depends(get_connected_cameras),
+    profile_manager=Depends(get_profile_manager_dep),
 ):
-    """Connect every configured camera that isn't already connected."""
+    """Connect and configure every configured camera that isn't already connected, in parallel.
+    One camera failing doesn't affect the others."""
     serials = app_config.get("gopro_serial_numbers", [])
-    results = {}
-    for serial in serials:
-        if serial in connected_cameras:
-            results[serial] = {"status": "already_connected"}
-            continue
-        cam = GPcam(serial)
-        try:
-            res = cam.getCameraInfo()
-            if res.status_code == 200:
+    results = {s: {"status": "already_connected"} for s in serials if s in connected_cameras}
+    todo = [s for s in serials if s not in connected_cameras]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(_connect_one, s, profile_manager): s for s in todo}
+        for future, serial in futures.items():
+            try:
+                cam, warnings = future.result()
                 connected_cameras[serial] = cam
-                cam.USBenable()
-                results[serial] = {"status": "success"}
-            else:
-                results[serial] = {"status": "error", "detail": "Camera returned an error response"}
-        except Exception as e:
-            results[serial] = {"status": "error", "detail": str(e)}
+                results[serial] = {"status": "success", "warnings": warnings}
+                print(f"Connected {serial}" + (f" (warnings: {warnings})" if warnings else ""))
+            except Exception as e:
+                results[serial] = {"status": "error", "detail": str(e)}
+                print(f"Failed to connect {serial}: {e}")
     return {"status": "complete", "results": results}
 
 
 @router.post("/{serial}/connect")
 def connect_camera(
     serial: str,
+    app_config: dict = Depends(get_app_config),
     connected_cameras: dict = Depends(get_connected_cameras),
     profile_manager=Depends(get_profile_manager_dep),
 ):
-    cam = GPcam(serial)
+    """Connect one camera (same setup as connect-all). The UI uses connect-all; kept for scripting/testing."""
+    if serial not in app_config.get("gopro_serial_numbers", []):
+        raise HTTPException(status_code=404, detail=f"Unknown camera {serial}")
     try:
-        res = cam.getCameraInfo()
-        if res.status_code == 200:
-            connected_cameras[serial] = cam
-            cam.USBenable()
-
-            try:
-                state_res = cam.getState()
-                if state_res.status_code == 200:
-                    cam_info = res.json()
-                    state_json = state_res.json()
-                    # We might need reference to properly create profile, but we'll try without
-                    model = cam_info.get('model_name', '')
-                    firmware = cam_info.get('firmware_version', '')
-                    reference = profile_manager.load_settings_reference(model, firmware)
-                    if reference:
-                        profile_manager.create_or_update_profile(cam_info, state_json, reference)
-            except Exception as e:
-                print(f"Warning: Failed to update camera profile for {serial}: {e}")
-
-            return {"status": "success"}
-        else:
-            raise HTTPException(status_code=400, detail="Failed to connect, camera returned error")
+        cam, warnings = _connect_one(serial, profile_manager)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=502, detail=f"Failed to connect: {e}")
+    connected_cameras[serial] = cam
+    return {"status": "success", "warnings": warnings}
 
 
 @router.post("/{serial}/disconnect")
@@ -247,6 +339,40 @@ def disconnect_camera(
     return {"status": "success"}
 
 
+def disconnect_all(connected_cameras: dict, preview_sessions: dict) -> None:
+    """Stop previews and release USB control on every camera. Called on server shutdown."""
+    for serial in list(connected_cameras):
+        stop_session(serial, preview_sessions)
+        try:
+            connected_cameras[serial].USBdisable()
+        except Exception:
+            pass
+        connected_cameras.pop(serial, None)
+        print(f"Disconnected {serial}")
+
+
+def start_keep_alive(connected_cameras: dict, stop_event: threading.Event) -> threading.Thread:
+    """Ping every connected camera every 30s so it stays connected and awake, preview or not.
+    On a failed ping, re-assert USB control; the camera stays in the list and the next round retries."""
+    def loop():
+        while not stop_event.wait(KEEP_ALIVE_INTERVAL_S):
+            for serial, cam in list(connected_cameras.items()):
+                try:
+                    if cam.keepAlive().status_code == 200:
+                        continue
+                except Exception:
+                    pass
+                print(f"Keep-alive failed for {serial}, re-enabling USB control")
+                try:
+                    cam.USBenable()
+                except Exception:
+                    pass
+
+    thread = threading.Thread(target=loop, daemon=True)
+    thread.start()
+    return thread
+
+
 # ---------------------------------------------------------------------------
 # Info / state / settings reference
 # ---------------------------------------------------------------------------
@@ -257,6 +383,7 @@ def get_camera_info(serial: str, connected_cameras: dict = Depends(get_connected
     res = cam.getCameraInfo()
     if res.status_code != 200:
         raise HTTPException(status_code=502, detail="Failed to read camera info")
+
     return res.json()
 
 

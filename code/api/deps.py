@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, Depends
 from go2kin import load_app_config, save_app_config
 from project_manager import ProjectManager
 from camera_profiles import get_profile_manager
+from api.processing_job import ProcessingJob
 
 
 def init_app_state(app: FastAPI) -> None:
@@ -52,7 +53,28 @@ def init_app_state(app: FastAPI) -> None:
 
     app.state.preview_sessions = {}   # serial -> PreviewSession, owned by preview.py
 
-    app.state.selection_state = {"project": None, "session": None, "subject_id": None}
+    app.state.processing_job = ProcessingJob()   # Pose2Sim run state, owned by processing.py
+
+    app.state.selection_state = restore_selection(app.state.pm, config)
+
+
+def restore_selection(pm: ProjectManager, config: dict) -> dict:
+    """Last project/session/participant from the config, as the tkinter TopBar restores them.
+    Each is kept only if it still exists (and the session/participant only if the project does)."""
+    selection = {"project": None, "session": None, "subject_id": None}
+    project = config.get("last_project", "")
+    if not project or project not in pm.list_projects():
+        return selection
+    selection["project"] = project
+    try:
+        if config.get("last_session", "") in pm.list_sessions(project):
+            selection["session"] = config["last_session"]
+        participant = config.get("last_participant", "")
+        if participant and any(s["subject_id"] == participant for s in pm.list_subjects(project)):
+            selection["subject_id"] = participant
+    except Exception as e:
+        print(f"Could not fully restore last selection: {e}")
+    return selection
 
 
 def get_selection_state(request: Request) -> dict:
@@ -81,6 +103,10 @@ def get_calibration_state(request: Request) -> dict:
 
 def get_preview_sessions(request: Request) -> dict:
     return request.app.state.preview_sessions
+
+
+def get_processing_job(request: Request) -> ProcessingJob:
+    return request.app.state.processing_job
 
 
 # Recording Tab dependencies
