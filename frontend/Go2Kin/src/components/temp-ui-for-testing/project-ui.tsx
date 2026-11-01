@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SELECTION_CHANGED } from '../project-selector'
 
 const API = 'http://localhost:8000/api/projects'
 
@@ -20,6 +21,7 @@ function ProjectUI() {
         try {
             const res = await fetch(API + '/selection')
             setSelection(await res.json())
+            window.dispatchEvent(new Event(SELECTION_CHANGED))
         } catch {
             setSelection(null)
         }

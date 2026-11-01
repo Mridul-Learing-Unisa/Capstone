@@ -1,5 +1,4 @@
 import { lazy, Suspense } from 'react'
-import './App.css'
 import TempUIForStyling from './components/temp-ui-for-styling/temp-ui-for-styling.tsx'
 import ProjectUI from './components/temp-ui-for-testing/project-ui'
 import CameraUI from './components/temp-ui-for-testing/camera-ui'
@@ -8,12 +7,21 @@ import IntrinsicUI from './components/temp-ui-for-testing/intrinsic-ui'
 import ExtrinsicUI from './components/temp-ui-for-testing/extrinsic-ui'
 import RecordingUI from './components/temp-ui-for-testing/recording-ui'
 import ProcessingUI from './components/temp-ui-for-testing/processing-ui'
+import ProjectSelector from './components/project-selector.tsx'
+import SubjectSelector from './components/subject-selector.tsx'
+import CalibrationStatus from './components/calibration-status.tsx'
 
 const SceneUI = lazy(() => import('./components/temp-ui-for-testing/scene-ui'))
 
 function App() {
   return (
     <main>
+      <header>
+        <ProjectSelector />
+        <SubjectSelector />
+        <CalibrationStatus />
+      </header>
+
       <CameraUI />
       <ProjectUI />
       <CharucoUI />

@@ -45,7 +45,7 @@
 
   --fs-base: 1rem;
   --fs-small: 0.75rem;
-  --fs-large: 1.5rem;
+  --fs-large: 1.25rem;
 
   --fw-regular: 400;
   --fw-medium: 600;
@@ -70,15 +70,25 @@ body {
 }
 
 #root {
-  width: 1126px;
   max-width: 100%;
-  margin: 0 auto;
   text-align: center;
-  border-inline: 1px solid var(--border-primary);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+header {
+  position: relative;
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: var(--padding-base);
+  padding-block: var(--padding-small);
+  background-color: var(--bg-secondary);
+  width: 100%;
+  height: 3.5rem;
 }
 
 section {
@@ -93,32 +103,6 @@ section {
 
 section h2 {
   color: var(--text-secondary);
-}
-
-.popup {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  row-gap: 1rem;
-  padding: var(--padding-base);
-  border-color: var(--border-primary);
-  border-style: solid;
-  border-width: 1px;
-  border-radius: 0.5rem;
-  background-color: var(--bg-main);
-  box-shadow: 0px 6px 6px 0px rgba(0, 0, 0, 0.25);
-  z-index: 9999;
-}
-
-.data {
-  font-family: var(--mono);
-  font-size: var(--fs-base);
-}
-
-.text-small {
-  color: var(--text-secondary);
-  font-size: var(--fs-small);
 }
 
 input[type="text"] {
@@ -175,6 +159,7 @@ select:disabled {
 
   button[type="button"]:hover:not(:disabled) {
     transform: scale(0.97);
+    cursor: pointer;
   }
 }
 
@@ -187,4 +172,62 @@ select:disabled {
     color: var(--bg-main);
     border-style: none;
   }
+}
+
+.project-selector,
+.subject-selector {
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: var(--padding-base);
+  padding-block: var(--padding-small);
+  border-color: var(--border-primary);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0.5rem;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+}
+
+.project-selector:hover,
+.subject-selector:hover {
+  transform: scale(0.99);
+  cursor: pointer;
+}
+
+.calibration-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.popup {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  row-gap: 1rem;
+  padding: var(--padding-base);
+  border-color: var(--border-primary);
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 0.5rem;
+  background-color: var(--bg-main);
+  box-shadow: 0px 6px 6px 0px rgba(0, 0, 0, 0.25);
+  z-index: 9999;
+}
+
+.data {
+  font-family: var(--mono);
+  font-size: var(--fs-base);
+}
+
+.text-small {
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
 }

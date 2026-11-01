@@ -2,6 +2,8 @@
 # Mirrors the tkinter TopBar: the selection is saved to go2kin_config.json
 # (last_project / last_session / last_participant) and restored at startup (deps.init_app_state).
 
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from go2kin import save_app_config
@@ -178,14 +180,18 @@ def get_calibration_freshness(project: str, pm: ProjectManager = Depends(get_pro
     try:
         latest = pm.get_latest_calibration(project)
         if latest is None:
-            return {"status": "red", "calibration": None, "age_days": None, "label": "none"}
+            return {"status": "red", "calibration": None, "age_days": None, "age_seconds": None, "label": "none"}
         age_days = pm.get_calibration_age_days(project, latest)
+        # Finer-grained than age_days, so the UI can say "5 hours old"
+        mtime = pm.get_calibration_path(project, latest, "json").stat().st_mtime
+        age_seconds = int(time.time() - mtime)
         # Strip the timestamp suffix for display ("initial_2026-03-25-14-00" -> "initial"), as tkinter does.
         display = latest.rsplit("_", 1)[0] if "_" in latest else latest
         return {
             "status": "green" if age_days < 1 else "orange",
             "calibration": latest,
             "age_days": age_days,
+            "age_seconds": age_seconds,
             "label": f"{display} — {'today' if age_days < 1 else f'{age_days}d ago'}",
         }
     except FileNotFoundError as e:
