@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import DownArrowIcon from './icons/down-arrow-icon'
-import { SELECTION_CHANGED } from './project-selector'
+import { SELECTION_CHANGED } from './project-control/project-api'
+import SubjectIcon from './icons/subject-icon'
 
 const API = 'http://localhost:8000/api/projects'
 
@@ -20,7 +21,7 @@ export default function SubjectSelector() {
 
     return (
         <button className="subject-selector w-[12.5rem]">
-            
+            <SubjectIcon />
             <h2>{subjectId ?? 'No subject'}</h2>
             <span className="ml-auto">
                 <DownArrowIcon />

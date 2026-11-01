@@ -79,7 +79,6 @@ body {
 }
 
 header {
-  position: relative;
   display: flex;
   justify-content: start;
   align-items: center;
@@ -198,12 +197,9 @@ select:disabled {
 }
 
 .calibration-status {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
   gap: 0.5rem;
+  margin-left: auto;
 }
 
 .popup {

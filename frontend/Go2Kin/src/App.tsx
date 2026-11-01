@@ -7,7 +7,7 @@ import IntrinsicUI from './components/temp-ui-for-testing/intrinsic-ui'
 import ExtrinsicUI from './components/temp-ui-for-testing/extrinsic-ui'
 import RecordingUI from './components/temp-ui-for-testing/recording-ui'
 import ProcessingUI from './components/temp-ui-for-testing/processing-ui'
-import ProjectSelector from './components/project-selector.tsx'
+import ProjectSelector from './components/project-control/project-selector.tsx'
 import SubjectSelector from './components/subject-selector.tsx'
 import CalibrationStatus from './components/calibration-status.tsx'
 
@@ -15,12 +15,15 @@ const SceneUI = lazy(() => import('./components/temp-ui-for-testing/scene-ui'))
 
 function App() {
   return (
-    <main>
+    <div>
       <header>
         <ProjectSelector />
         <SubjectSelector />
         <CalibrationStatus />
       </header>
+
+      <main>
+      </main>
 
       <CameraUI />
       <ProjectUI />
@@ -33,7 +36,7 @@ function App() {
       <RecordingUI />
       <ProcessingUI />
       <TempUIForStyling />
-    </main>
+    </div>
   )
 }
 
