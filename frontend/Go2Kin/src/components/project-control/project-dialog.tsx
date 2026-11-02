@@ -88,7 +88,7 @@ export default function ProjectDialog({ current, onClose }: { current: Selection
             {/* Blocks clicks on the rest of the page; deliberately does not close the dialog */}
             <div className="fixed inset-0 z-[998] bg-black/10" />
 
-            <section className="absolute top-[3rem] left-0 w-[38rem] z-[999] flex flex-col gap-4 text-left">
+            <section className="absolute top-[3rem] left-0 w-[38rem] h-[] z-[999] flex flex-col gap-4 text-left">
                 <div className="grid grid-cols-2 gap-[1rem]">
                     <NameColumn
                         title="Project"
@@ -112,8 +112,20 @@ export default function ProjectDialog({ current, onClose }: { current: Selection
                 {error && <p className="text-error">{error}</p>}
 
                 <div className="flex justify-end gap-[1rem]">
-                    <button type="button" onClick={onClose} disabled={busy}>Cancel</button>
-                    <button type="button" onClick={confirm} disabled={busy || !project || !session}>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={busy}
+                        className="border-none bg-error text-bg-main"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={confirm}
+                        disabled={busy || !project || !session}
+                        className="border-none bg-success text-bg-main"
+                    >
                         Confirm
                     </button>
                 </div>
