@@ -10,6 +10,7 @@ import ProcessingUI from "./components/temp-ui-for-testing/processing-ui"
 import ProjectSelector from "./components/project-control/project-selector.tsx"
 import SubjectSelector from "./components/project-control/subject-selector.tsx"
 import CalibrationStatus from "./components/project-control/calibration-status.tsx"
+import RecordingTab from "./components/recording/recording-tab.tsx"
 
 const SceneUI = lazy(() => import("./components/temp-ui-for-testing/scene-ui"))
 
@@ -23,6 +24,7 @@ function App() {
       </header>
 
       <main>
+        <RecordingTab />
       </main>
 
       <CameraUI />
