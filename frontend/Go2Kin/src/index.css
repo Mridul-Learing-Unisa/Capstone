@@ -91,6 +91,12 @@ header {
   height: 3.5rem;
 }
 
+footer {
+  padding-inline: var(--padding-base);
+  padding-block: var(--padding-small);
+  width: 100%;
+}
+
 section {
   padding-inline: var(--padding-base);
   padding-block: var(--padding-small);
@@ -204,8 +210,27 @@ select:disabled {
   left: 50%;
   transform: translate(-0.75rem, -50%);
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   margin-left: auto;
+}
+
+.camera-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.camera-preview .status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resolution, .fps {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
 }
 
 .popup {
