@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import ConnectedIcon from './icons/connected-icon'
-import DisconnectedIcon from './icons/disconnected-icon'
-import { SELECTION_CHANGED } from './project-selector'
+import ConnectedIcon from '../icons/connected-icon'
+import DisconnectedIcon from '../icons/disconnected-icon'
+import { SELECTION_CHANGED } from './project-api'
 
 const API = 'http://localhost:8000/api/projects'
 

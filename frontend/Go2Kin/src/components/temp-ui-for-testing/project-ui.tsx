@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { SELECTION_CHANGED } from '../project-selector'
+import { SELECTION_CHANGED } from '../project-control/project-api'
 
 const API = 'http://localhost:8000/api/projects'
 
