@@ -38,11 +38,13 @@ export default function CameraGrid({ cameras, disabled }: Props) {
     return (
         <section className="flex-1 flex flex-col gap-3">
             <div className="grid grid-cols-2 gap-3 flex-1">
-                {cameras.slice(0, 4).map((cam, i) => {
+                {[0, 1, 2, 3].map(i => {
+                    // always draw 4 boxes, even if the API has fewer cameras set up
+                    const cam = cameras[i] ?? { serial: `empty-${i}`, name: `GoPro ${i + 1}`, status: "not set up" }
                     const connected = cam.status === "connected"
                     const isLive = showing === cam.serial
                     return (
-                        <div key={cam.serial} className="relative bg-[#333] text-white rounded min-h-48 flex items-center justify-center overflow-hidden">
+                        <div key={i} className="relative bg-[#333] text-white rounded min-h-48 flex items-center justify-center overflow-hidden">
                             {isLive ? (
                                 <img
                                     src={previewUrl(cam.serial)}
@@ -83,7 +85,9 @@ export default function CameraGrid({ cameras, disabled }: Props) {
                 })}
             </div>
 
-            {cameras.length === 0 && <p className="text-small">No cameras found, is the API running?</p>}
+            {cameras.length === 0 && (
+                <p className="text-small">No cameras set up. Is the API running, and are the serials in go2kin_config.json?</p>
+            )}
             {disabled && <p className="text-small">Previews are off while recording.</p>}
             {error && <p className="text-error">{error}</p>}
         </section>
