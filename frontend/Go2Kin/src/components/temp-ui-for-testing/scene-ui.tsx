@@ -24,10 +24,12 @@ type Scene = { source: 'live' | 'saved'; cameras: SceneCamera[] }
 
 type Label = { text: string; position: Vec3; color: string; pill: boolean }
 
-// Muted per-camera colours (matplotlib's default cycle, toned down).
-const CAM_COLORS = ['#4C78A8', '#E0893A', '#59A14F', '#B07AA1']
-const AXES: [string, Vec3, string][] = [['X', [1, 0, 0], '#D9544D'], ['Y', [0, 1, 0], '#4FA36C'], ['Z', [0, 0, 1], '#4A7FD0']]
-const BG = '#F6F6F4'
+// Dark background, so cameras and axes use bright colours to stand out against it.
+// Cameras avoid pure red/green/blue so they don't look like the X/Y/Z axes.
+const CAM_COLORS = ['#4FC3F7', '#FFB74D', '#F06292', '#BA68C8']
+const AXES: [string, Vec3, string][] = [['X', [1, 0, 0], '#FF5252'], ['Y', [0, 1, 0], '#69F0AE'], ['Z', [0, 0, 1], '#448AFF']]
+const BG = '#121212'
+const GRID = '#2E2E2E'   // just visible on BG, so the floor doesn't compete with the cameras
 
 // World frame from the API is Z up, so the three.js camera is set Z up too and no axis swap is needed.
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1)
@@ -129,7 +131,7 @@ function SceneContents({ scene, labels, labelRefs, viewKey }: {
     const { center, halfRange } = useMemo(() => bounds(scene.cameras), [scene])
     const extent = 2 * Math.ceil(halfRange + 1)   // even, so 1m grid lines land on whole metres
     const grid = useMemo(() => {
-        const g = new THREE.GridHelper(extent, extent, '#DCDCD7', '#DCDCD7')
+        const g = new THREE.GridHelper(extent, extent, GRID, GRID)
         g.rotation.x = Math.PI / 2   // GridHelper lies in XZ; floor is XY (Z=0)
         ;(g.material as THREE.Material).depthWrite = false   // so the world axes on Z=0 don't z-fight with it
         return g
@@ -203,21 +205,21 @@ function SceneUI() {
         ...AXES.map(([name, end, color]) => ({ text: name, position: end, color, pill: false })),
     ] : [], [scene])
 
+    // Fills whatever space the parent gives it (flex-1 in both directions), so the page decides the size.
+    // min-h keeps it visible on pages that don't give it a height, like the Testing UI.
     return (
-        <div>
-            <h3>Camera positions</h3>
-            <div>
-                <button onClick={() => setViewKey(k => k + 1)} disabled={!scene}>Reset view</button>{' '}
-                <button onClick={fetchScene}>Refresh</button>{' '}
-                {scene
-                    ? `${scene.cameras.length} cameras (${scene.source === 'live' ? 'current session' : 'saved file'})`
-                    : error}
+        <div className="flex-1 min-w-0 min-h-[20rem] flex flex-col gap-[0.5rem]">
+            <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setViewKey(k => k + 1)} disabled={!scene}>Reset view</button>
+                <button type="button" onClick={fetchScene}>Refresh</button>
+                <span className="text-small">
+                    {scene
+                        ? `${scene.cameras.length} cameras (${scene.source === 'live' ? 'current session' : 'saved file'})`
+                        : error}
+                </span>
             </div>
 
-            <div style={{
-                width: 720, height: 460, marginTop: 6, borderRadius: 8, overflow: 'hidden',
-                background: BG, border: '1px solid #E2E2DE', position: 'relative',
-            }}>
+            <div className="flex-1 min-h-0 relative overflow-hidden rounded-lg border border-[#333333]" style={{ background: BG }}>
                 {scene ? (
                     <>
                         <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 40 }}>
@@ -230,9 +232,9 @@ function SceneUI() {
                                 style={{
                                     position: 'absolute', left: 0, top: 0, pointerEvents: 'none', whiteSpace: 'nowrap',
                                     font: `${l.pill ? 500 : 600} 11px/1 system-ui, sans-serif`, letterSpacing: 0.3,
-                                    color: l.pill ? '#333' : l.color,
+                                    color: l.pill ? '#EEEEEE' : l.color,
                                     ...(l.pill && {
-                                        background: 'rgba(255,255,255,0.85)', border: `1px solid ${l.color}`,
+                                        background: 'rgba(18,18,18,0.85)', border: `1px solid ${l.color}`,
                                         borderRadius: 999, padding: '3px 7px',
                                     }),
                                 }}
@@ -244,7 +246,7 @@ function SceneUI() {
                 ) : (
                     <div style={{
                         height: '100%', display: 'grid', placeItems: 'center',
-                        font: '13px system-ui, sans-serif', color: '#999',
+                        font: '13px system-ui, sans-serif', color: '#888',
                     }}>
                         No calibration to show
                     </div>

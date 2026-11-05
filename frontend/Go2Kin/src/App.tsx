@@ -11,6 +11,7 @@ import ProcessingUI from "./components/temp-ui-for-testing/processing-ui"
 import ProjectSelector from "./components/project-control/project-selector.tsx"
 import SubjectSelector from "./components/project-control/subject-selector.tsx"
 import CalibrationStatus from "./components/project-control/calibration-status.tsx"
+import CalibrationTab from "./pages/calibration-tab.tsx"
 import RecordingTab from "./pages/recording-tab.tsx"
 
 const SceneUI = lazy(() => import("./components/temp-ui-for-testing/scene-ui"))
@@ -50,12 +51,14 @@ function App() {
 
       <nav className="flex gap-2 px-6 pt-2 border-b border-[#BBBBBB]">
         <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
+        <NavLink to="/calibration" className={tabClass}>Calibration</NavLink>
         <NavLink to="/recording" className={tabClass}>Recording</NavLink>
       </nav>
 
       <main className="flex flex-col flex-1">
         <Routes>
           <Route path="/" element={<TestingUI />} />
+          <Route path="/calibration" element={<CalibrationTab />} />
           <Route path="/recording" element={<RecordingTab />} />
         </Routes>
       </main>
