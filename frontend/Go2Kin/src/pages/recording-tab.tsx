@@ -3,7 +3,7 @@ import RecordTrial from "../components/recording/record-trial"
 import SessionTrials from "../components/recording/session-trials"
 import CameraGrid from "../components/recording/camera-grid"
 import {
-    FINISHED, getCameras, getJob, getRecordingStatus, getSelection, nextTrialName,
+    FINISHED, getCameras, getJob, getRecordingStatus, getSavedSoundSource, getSelection, nextTrialName,
     startRecording, stopRecording, type Camera, type Job, type Selection,
 } from "../components/recording/recording-api"
 
@@ -19,7 +19,7 @@ const JOB_TEXT: Record<string, string> = {
 // It records with every connected camera, same as the tkinter app.
 export default function RecordingTab() {
     const [trialName, setTrialName] = useState("TEMP")
-    const [sound, setSound] = useState(["0.0", "0.0", "0.0"])
+    const [sound, setSound] = useState(["0.0", "0.0", "0.0"])   // replaced by the last used one on load
 
     const [cameras, setCameras] = useState<Camera[]>([])
     const [selection, setSelection] = useState<Selection>({ project: null, session: null })
@@ -51,9 +51,14 @@ export default function RecordingTab() {
         return () => clearInterval(timer)
     }, [])
 
-    // if the page gets refreshed mid-take, pick up where the server is at
+    // start from the last sound source used (like tkinter), and if the page gets
+    // refreshed mid-take, pick up where the server is at
     useEffect(() => {
-        getRecordingStatus().then(status => {
+        async function load() {
+            const saved = await getSavedSoundSource().catch(() => null)
+            if (saved) setSound(saved)
+
+            const status = await getRecordingStatus()
             if (status.state === "idle" || !status.trial_name) return
             setTrialName(status.trial_name)
             if (status.sound_source_position?.length === 3) {
@@ -66,7 +71,8 @@ export default function RecordingTab() {
                 setJobTrial(status.trial_name)
                 setJob({ task_id: status.task_id, status: status.job_status ?? "pending", results: null })
             }
-        }).catch(() => { /* API is down, the refresh above already shows that */ })
+        }
+        load().catch(() => { /* API is down, the refresh above already shows that */ })
     }, [])
 
     // keep checking the job every second until it's finished

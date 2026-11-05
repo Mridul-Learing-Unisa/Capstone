@@ -68,6 +68,14 @@ export function getSelection(): Promise<Selection> {
     return request("/api/projects/selection")
 }
 
+// last sound source used, saved by the server on every start (same key as tkinter)
+export async function getSavedSoundSource(): Promise<string[] | null> {
+    const config = await request("/api/config")
+    const saved = config?.sound_source
+    if (!saved) return null
+    return [saved.x, saved.y, saved.z].map(v => String(v ?? "0.0"))
+}
+
 export function getRecordingStatus(): Promise<RecordingStatus> {
     return request("/api/recording/status")
 }
