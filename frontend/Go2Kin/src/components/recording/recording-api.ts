@@ -5,6 +5,16 @@ const HOST = "http://localhost:8000"
 export type Camera = { serial: string, name: string, status: string }
 export type Selection = { project: string | null, session: string | null }
 
+// one trial.json from project_manager.create_trial
+export type Trial = {
+    trial_name: string
+    date: string
+    time: string
+    cameras_used: string[]
+    synced: boolean
+    processed: boolean
+}
+
 export type Job = {
     task_id: string
     status: string   // pending, downloading, syncing, complete or failed
@@ -75,6 +85,25 @@ export function stopRecording(): Promise<Job> {
 
 export function getJob(taskId: string): Promise<Job> {
     return request(`/api/recording/jobs/${taskId}`)
+}
+
+export async function getTrials(project: string, session: string): Promise<Trial[]> {
+    const data = await request(`/api/projects/${encodeURIComponent(project)}/sessions/${encodeURIComponent(session)}/trials`)
+    return data.trials
+}
+
+// only one camera can preview at a time, starting a new one stops the old one on the server
+export function startPreview(serial: string) {
+    return request(`/api/preview/${serial}/start`, "POST")
+}
+
+export function stopPreview(serial: string) {
+    return request(`/api/preview/${serial}/stop`, "POST")
+}
+
+// MJPEG stream, works straight in an <img src>
+export function previewUrl(serial: string) {
+    return `${HOST}/api/preview/${serial}/stream`
 }
 
 // same as the tkinter app: "walk" -> "walk_001", "walk_001" -> "walk_002"
