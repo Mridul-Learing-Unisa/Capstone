@@ -52,7 +52,7 @@ export default function RecordTrial({ trialName, sound, locked, onTrialNameChang
             </div>
 
             <div className="flex flex-col gap-4">
-                <label className="flex items-center gap-5">
+                <label className="flex items-center gap-4">
                     <span className="w-[12rem] text-right">Trial Name:</span>
                     <input
                         type="text"
@@ -64,9 +64,9 @@ export default function RecordTrial({ trialName, sound, locked, onTrialNameChang
                 </label>
 
                 {/* div, not label: it holds three labelled inputs and labels can't be nested */}
-                <div className="flex items-center gap-5">
+                <div className="flex items-center gap-4">
                     <span className="w-[12rem] text-right">Sound Source (m):</span>
-                    <div className="flex gap-5">
+                    <div className="flex gap-4">
                         {["X", "Y", "Z"].map((axis, i) => (
                             <label key={axis} className="flex items-center gap-1">
                                 <span className="text-small">{axis}</span>
@@ -83,7 +83,7 @@ export default function RecordTrial({ trialName, sound, locked, onTrialNameChang
                 </div>
             </div>
 
-            <div className="flex items-center gap-5 pl-[12rem] mt-2">
+            <div className="flex items-center gap-4 pl-[12rem] mt-2">
                 <button
                     type="button"
                     className={`button-large w-40! h-14! disabled:cursor-not-allowed ${buttonColour}`}

@@ -8,12 +8,17 @@ export type Selection = { project: string | null, session: string | null }
 // one trial.json from project_manager.create_trial
 export type Trial = {
     trial_name: string
-    date: string
-    time: string
+    subject_id: string
+    calibration_file: string          // calibration name, or "none"
+    date: string                      // YYYY-MM-DD
+    time: string                      // HH:MM:SS
     cameras_used: string[]
     synced: boolean
-    processed: boolean
+    processed: boolean | "failed"
 }
+
+// one subject JSON from project_manager.create_subject (only the fields the UI uses)
+export type Subject = { subject_id: string, initials?: string }
 
 export type Job = {
     task_id: string
@@ -102,6 +107,11 @@ export function getJob(taskId: string): Promise<Job> {
 export async function getTrials(project: string, session: string): Promise<Trial[]> {
     const data = await request(`/api/projects/${encodeURIComponent(project)}/sessions/${encodeURIComponent(session)}/trials`)
     return data.trials
+}
+
+export async function getSubjects(project: string): Promise<Subject[]> {
+    const data = await request(`/api/projects/${encodeURIComponent(project)}/subjects`)
+    return data.subjects
 }
 
 // only one camera can preview at a time, starting a new one stops the old one on the server

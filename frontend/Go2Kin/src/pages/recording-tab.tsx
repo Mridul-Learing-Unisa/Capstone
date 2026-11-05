@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react"
 import RecordTrial from "../components/recording/record-trial"
 import SessionTrials from "../components/recording/session-trials"
-import CameraGrid from "../components/recording/camera-grid"
+// import CameraGrid from "../components/recording/camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSavedSoundSource, getSelection, nextTrialName,
     startRecording, stopRecording, type Camera, type Job, type Selection,
 } from "../components/recording/recording-api"
+import TrialsList from "../components/recording/trials-list"
+import ProcessTrials from "../components/processing/process-trials"
 
 // what to show under the Record button while the job runs
 const JOB_TEXT: Record<string, string> = {
@@ -33,6 +35,8 @@ export default function RecordingTab() {
     const [job, setJob] = useState<Job | null>(null)       // download + sync after stopping
     const [jobTrial, setJobTrial] = useState("")            // the trial that job belongs to
     const [trialsVersion, setTrialsVersion] = useState(0)   // bump to reload the trials list
+    // trials ticked in TrialsList (for Process), remembered with the session they belong to
+    const [picked, setPicked] = useState({ session: "", names: [] as string[] })
 
     // check cameras and the selected project/session every 3s
     useEffect(() => {
@@ -160,13 +164,17 @@ export default function RecordingTab() {
         setBusy(false)
     }
 
+    // ticks from another session don't count, so switching session clears them
+    const sessionKey = `${selection.project}/${selection.session}`
+    const selectedTrials = picked.session === sessionKey ? picked.names : []
+
     let activeTrial: string | null = null
     if (recording) activeTrial = trialName.trim()
     else if (jobRunning) activeTrial = jobTrial
 
     return (
-        <div className="flex gap-6 p-6 text-left flex-1">
-            <div className="w-[38rem] flex flex-col gap-6">
+        <div className="w-full flex gap-[1.5rem] p-[1.5rem]">
+            <div className="w-[38rem] flex flex-col gap-6 shrink-0">
                 <RecordTrial
                     trialName={trialName}
                     sound={sound}
@@ -181,11 +189,17 @@ export default function RecordingTab() {
                     onStart={handleStart}
                     onStop={handleStop}
                 />
-                <SessionTrials selection={selection} activeTrial={activeTrial} refreshKey={trialsVersion} />
-
+                <ProcessTrials />
             </div>
 
-            <CameraGrid cameras={cameras} disabled={recording || busy} />
+            <TrialsList
+                selection={selection}
+                activeTrial={activeTrial}
+                refreshKey={trialsVersion}
+                selected={selectedTrials}
+                onSelectedChange={names => setPicked({ session: sessionKey, names })}
+            />
+            {/* <CameraGrid cameras={cameras} disabled={recording || busy} /> */}
         </div>
     )
 }
