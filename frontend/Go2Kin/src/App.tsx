@@ -8,10 +8,11 @@ import IntrinsicUI from "./components/temp-ui-for-testing/intrinsic-ui"
 import ExtrinsicUI from "./components/temp-ui-for-testing/extrinsic-ui"
 import RecordingUI from "./components/temp-ui-for-testing/recording-ui"
 import ProcessingUI from "./components/temp-ui-for-testing/processing-ui"
-import ProjectSelector from "./components/project-control/project-selector.tsx"
-import SubjectSelector from "./components/project-control/subject-selector.tsx"
-import CalibrationStatus from "./components/project-control/calibration-status.tsx"
+import ProjectSelector from "./components/projects/project-selector.tsx"
+import SubjectSelector from "./components/projects/subject-selector.tsx"
+import CalibrationStatus from "./components/projects/calibration-status.tsx"
 import RecordingTab from "./pages/recording-tab.tsx"
+import Cameras from "./components/cameras/cameras.tsx"
 
 const SceneUI = lazy(() => import("./components/temp-ui-for-testing/scene-ui"))
 
@@ -59,6 +60,10 @@ function App() {
           <Route path="/recording" element={<RecordingTab />} />
         </Routes>
       </main>
+
+      <footer>
+        <Cameras />
+      </footer>
     </BrowserRouter>
   )
 }
