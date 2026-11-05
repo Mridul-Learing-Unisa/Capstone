@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react"
+import { BrowserRouter, NavLink, Route, Routes } from "react-router"
 import TempUIForStyling from "./components/temp-ui-for-styling/temp-ui-for-styling.tsx"
 import ProjectUI from "./components/temp-ui-for-testing/project-ui"
 import CameraUI from "./components/temp-ui-for-testing/camera-ui"
@@ -14,19 +15,10 @@ import RecordingTab from "./pages/recording-tab.tsx"
 
 const SceneUI = lazy(() => import("./components/temp-ui-for-testing/scene-ui"))
 
-function App() {
+// the temp panels for poking each API by hand, kept on the home page for now
+function TestingUI() {
   return (
-    <div>
-      <header>
-        <ProjectSelector />
-        <SubjectSelector />
-        <CalibrationStatus />
-      </header>
-
-      <main>
-        <RecordingTab />
-      </main>
-
+    <>
       <CameraUI />
       <ProjectUI />
       <CharucoUI />
@@ -38,7 +30,36 @@ function App() {
       <RecordingUI />
       <ProcessingUI />
       <TempUIForStyling />
-    </div>
+    </>
+  )
+}
+
+// grey background on the tab you're on, like the Figma tabs
+function tabClass({ isActive }: { isActive: boolean }) {
+  return `px-4 py-1 rounded-t ${isActive ? "bg-bg-tertiary" : ""}`
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <header>
+        <ProjectSelector />
+        <SubjectSelector />
+        <CalibrationStatus />
+      </header>
+
+      <nav className="flex gap-2 px-6 pt-2 border-b border-[#BBBBBB]">
+        <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
+        <NavLink to="/recording" className={tabClass}>Recording</NavLink>
+      </nav>
+
+      <main className="flex flex-col flex-1">
+        <Routes>
+          <Route path="/" element={<TestingUI />} />
+          <Route path="/recording" element={<RecordingTab />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
   )
 }
 
