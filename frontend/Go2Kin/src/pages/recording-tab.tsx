@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react"
-import TrialSetup from "./trial-setup"
-import SessionTrials from "./session-trials"
-import RecordPanel from "./record-panel"
-import CameraGrid from "./camera-grid"
+import TrialSetup from "../components/recording/trial-setup"
+import SessionTrials from "../components/recording/session-trials"
+import RecordPanel from "../components/recording/record-panel"
+import CameraGrid from "../components/recording/camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSelection, nextTrialName,
     startRecording, stopRecording, type Camera, type Job, type Selection,
-} from "./recording-api"
+} from "../components/recording/recording-api"
 
 // what to show under the Record button while the job runs
 const JOB_TEXT: Record<string, string> = {
