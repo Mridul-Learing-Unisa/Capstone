@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react"
 import TrialSetup from "./trial-setup"
+import SessionTrials from "./session-trials"
 import RecordPanel from "./record-panel"
-import TrialResult from "./trial-result"
+import CameraGrid from "./camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSelection, nextTrialName,
     startRecording, stopRecording, type Camera, type Job, type Selection,
 } from "./recording-api"
 
+// what to show under the Record button while the job runs
+const JOB_TEXT: Record<string, string> = {
+    pending: "Getting ready to download...",
+    downloading: "Downloading videos from the cameras...",
+    syncing: "Syncing videos using the clap...",
+}
+
 // Recording tab from the V1 Figma design.
-// Left: trial setup + record button. Right: how the last take went.
+// Left: trial setup, the session's trials and the record button. Right: camera tiles.
 // It records with every connected camera, same as the tkinter app.
 export default function RecordingTab() {
     const [trialName, setTrialName] = useState("TEMP")
@@ -24,6 +32,7 @@ export default function RecordingTab() {
 
     const [job, setJob] = useState<Job | null>(null)       // download + sync after stopping
     const [jobTrial, setJobTrial] = useState("")            // the trial that job belongs to
+    const [trialsVersion, setTrialsVersion] = useState(0)   // bump to reload the trials list
 
     // check cameras and the selected project/session every 3s
     useEffect(() => {
@@ -68,8 +77,11 @@ export default function RecordingTab() {
             try {
                 const latest = await getJob(jobId)
                 setJob(latest)
-                // the trial folder is used up either way, so move to the next name
-                if (FINISHED.includes(latest.status)) setTrialName(name => nextTrialName(name))
+                if (FINISHED.includes(latest.status)) {
+                    // the trial folder is used up either way, so move to the next name
+                    setTrialName(name => nextTrialName(name))
+                    setTrialsVersion(v => v + 1)
+                }
             } catch { /* try again next tick */ }
         }, 1000)
         return () => clearInterval(timer)
@@ -85,13 +97,23 @@ export default function RecordingTab() {
     let canStart = false
     if (recording) message = `Recording with ${connected.length} camera(s)... clap twice!`
     else if (busy) message = "Talking to the cameras..."
-    else if (jobRunning) message = "Wait for the last trial to finish processing"
+    else if (jobRunning) message = JOB_TEXT[job.status] ?? job.status
     else if (apiDown) message = "Can't reach the API, is the server running?"
     else if (!hasSession) message = "Pick a project and session first"
     else if (connected.length === 0) message = "Connect at least one camera"
     else if (trialName.trim() === "") message = "Give the trial a name"
     else if (!soundOk) message = "Sound source X, Y and Z need to be numbers"
-    else canStart = true
+    else {
+        canStart = true
+        if (job?.status === "complete") message = `${jobTrial} saved and synced. Ready for the next one`
+    }
+
+    // explain why the last trial failed (sync check reasons or a server error)
+    let jobError = ""
+    if (job?.status === "failed") {
+        const reasons = job.results?.reasons ?? []
+        jobError = `${jobTrial} wasn't synced: ${job.error ?? (reasons.join("; ") || "unknown error")}`
+    }
 
     async function handleStart() {
         setBusy(true)
@@ -100,6 +122,7 @@ export default function RecordingTab() {
             await startRecording(trialName.trim(), connected.map(c => c.serial), sound.map(Number))
             setJob(null)
             setStartedAt(Date.now())
+            setTrialsVersion(v => v + 1)   // start makes the trial folder, so show it
         } catch (e) {
             setError((e as Error).message)
         }
@@ -122,9 +145,13 @@ export default function RecordingTab() {
         setBusy(false)
     }
 
+    let activeTrial: string | null = null
+    if (recording) activeTrial = trialName.trim()
+    else if (jobRunning) activeTrial = jobTrial
+
     return (
         <div className="flex gap-6 p-6 text-left flex-1">
-            <div className="w-[28rem] flex flex-col justify-between gap-6">
+            <div className="w-[28rem] flex flex-col gap-6">
                 <TrialSetup
                     trialName={trialName}
                     sound={sound}
@@ -132,18 +159,19 @@ export default function RecordingTab() {
                     onTrialNameChange={setTrialName}
                     onSoundChange={setSound}
                 />
+                <SessionTrials selection={selection} activeTrial={activeTrial} refreshKey={trialsVersion} />
                 <RecordPanel
                     startedAt={startedAt}
                     canStart={canStart}
                     busy={busy}
                     message={message}
-                    error={error}
+                    error={error || jobError}
                     onStart={handleStart}
                     onStop={handleStop}
                 />
             </div>
 
-            <TrialResult job={job} trialName={jobTrial} />
+            <CameraGrid cameras={cameras} disabled={recording || busy} />
         </div>
     )
 }
