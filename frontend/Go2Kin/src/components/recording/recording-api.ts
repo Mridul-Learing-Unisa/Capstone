@@ -31,6 +31,7 @@ export type Job = {
 export type RecordingStatus = {
     state: "idle" | "recording" | "processing"
     trial_name?: string
+    cameras_used?: string[]
     sound_source_position?: number[]
     started_at?: number   // unix seconds
     task_id?: string
@@ -71,7 +72,10 @@ export function getRecordingStatus(): Promise<RecordingStatus> {
     return request("/api/recording/status")
 }
 
-export function startRecording(trialName: string, cameras: string[], sound: number[]) {
+// cameras_used = the ones that actually started, failed = the ones that didn't (by serial)
+export type StartResult = { cameras_used: string[], failed: Record<string, string> }
+
+export function startRecording(trialName: string, cameras: string[], sound: number[]): Promise<StartResult> {
     return request("/api/recording/start", "POST", {
         trial_name: trialName,
         cameras_used: cameras,

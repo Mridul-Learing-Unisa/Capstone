@@ -26,6 +26,7 @@ export default function RecordingTab() {
     const [apiDown, setApiDown] = useState(false)
 
     const [startedAt, setStartedAt] = useState<number | null>(null)   // null = not recording
+    const [recordingCams, setRecordingCams] = useState<string[]>([])  // cameras that actually started
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState("")
 
@@ -59,6 +60,7 @@ export default function RecordingTab() {
                 setSound(status.sound_source_position.map(String))
             }
             if (status.state === "recording" && status.started_at) {
+                setRecordingCams(status.cameras_used ?? [])
                 setStartedAt(status.started_at * 1000)
             } else if (status.task_id) {
                 setJobTrial(status.trial_name)
@@ -88,14 +90,15 @@ export default function RecordingTab() {
 
     const recording = startedAt !== null
     const connected = cameras.filter(c => c.status === "connected")
-    const soundOk = sound.every(v => v.trim() !== "" && !isNaN(Number(v)))
+    // Number("") is 0 and Number("Infinity") is Infinity, so check both
+    const soundOk = sound.every(v => v.trim() !== "" && Number.isFinite(Number(v)))
     const hasSession = !!selection.project && !!selection.session
 
     // work out the hint under the button, first problem wins
     let message = "Press Record to start recording"
     let canStart = false
-    if (recording) message = `Recording with ${connected.length} camera(s)... clap twice!`
-    else if (busy) message = "Talking to the cameras..."
+    if (busy) message = recording ? "Stopping the cameras..." : "Starting the cameras..."
+    else if (recording) message = `Recording with ${recordingCams.length} camera(s)... clap twice!`
     else if (jobRunning) message = JOB_TEXT[job.status] ?? job.status
     else if (apiDown) message = "Can't reach the API, is the server running?"
     else if (!hasSession) message = "Pick a project and session first"
@@ -118,7 +121,14 @@ export default function RecordingTab() {
         setBusy(true)
         setError("")
         try {
-            await startRecording(trialName.trim(), connected.map(c => c.serial), sound.map(Number))
+            const result = await startRecording(trialName.trim(), connected.map(c => c.serial), sound.map(Number))
+            // the server carries on with the cameras that did start, so just warn about the rest
+            const failed = Object.keys(result.failed ?? {})
+            if (failed.length > 0) {
+                const names = failed.map(serial => cameras.find(c => c.serial === serial)?.name ?? serial)
+                setError(`Not recording on: ${names.join(", ")}`)
+            }
+            setRecordingCams(result.cameras_used)
             setJob(null)
             setStartedAt(Date.now())
             setTrialsVersion(v => v + 1)   // start makes the trial folder, so show it
