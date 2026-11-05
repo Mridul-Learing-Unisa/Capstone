@@ -92,7 +92,8 @@ header {
 }
 
 section {
-  padding: var(--padding-base);
+  padding-inline: var(--padding-base);
+  padding-block: var(--padding-small);
   border-color: var(--border-primary);
   border-style: solid;
   border-width: 1px;

@@ -6,12 +6,14 @@
 # A failure never leaves a recording stuck "active": the state is reset on every exit path.
 
 import concurrent.futures
+import re
 import time
 from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
+from go2kin import save_app_config
 from api.deps import (
     connected_cameras,
     recording_background_tasks,
@@ -36,6 +38,50 @@ ENCODING_WAIT_S = 120   # cap on waiting for a camera to finish writing the file
 def _reset(recording_info: dict) -> None:
     recording_info.clear()
     recording_info.update({"cameras_used": [], "trial_name": None, "sound_source_position": []})
+
+
+def _calibration_camera_array(calibration_state: dict, app_config: dict, project_manager, project: str):
+    """The calibration tkinter would use: the one loaded in the calibration tab. tkinter
+    auto-loads one at startup; the API only does when /calibration/auto-load is called, so if
+    nothing is loaded yet read the file auto-load would pick (last_calibration, else the
+    project's latest) without changing the calibration state."""
+    if calibration_state.get("camera_array") is not None:
+        return calibration_state["camera_array"]
+    last = app_config.get("last_calibration", "")
+    path = Path(last) if last else None
+    if path is None or not path.is_file():
+        latest = project_manager.get_latest_calibration(project)
+        path = project_manager.get_calibration_path(project, latest, "json") if latest else None
+    if path is None or not path.is_file():
+        return None
+    try:
+        from calibration.persistence import load_calibration
+        camera_array, _, _ = load_calibration(path)
+        return camera_array
+    except Exception as e:
+        print(f"  Could not read calibration {path.name} for sync: {e}")
+        return None
+
+
+def _camera_positions_for_sync(camera_array, video_paths):
+    """Same as tkinter CalibrationTab.get_camera_positions_for_sync: {filename: [x, y, z]} world
+    positions of the posed cameras, matched to videos by their _GP{N} suffix. None if there are none."""
+    if camera_array is None or not camera_array.posed_cameras:
+        return None
+
+    cam_world_pos = {}
+    for cam_id, cam in camera_array.posed_cameras.items():
+        if cam.rotation is not None and cam.translation is not None:
+            cam_world_pos[cam_id] = (-cam.rotation.T @ cam.translation).tolist()
+
+    camera_positions = {}
+    for vp in video_paths:
+        fname = Path(vp).name
+        m = re.search(r"_GP(\d+)\.", fname)
+        if m and int(m.group(1)) in cam_world_pos:
+            camera_positions[fname] = cam_world_pos[int(m.group(1))]
+
+    return camera_positions or None
 
 
 def _start_camera(serial: str, camera, profile_manager) -> None:
@@ -119,6 +165,10 @@ def start_recording(
         # Carry on with the cameras that did start (one camera's failure must not affect the others).
         project_manager.update_trial(project, session, data.trial_name, cameras_used=started)
 
+    # Remember the sound source for next time, as tkinter does (same {"x", "y", "z"} strings).
+    app_config["sound_source"] = dict(zip(("x", "y", "z"), (str(v) for v in data.sound_source_position)))
+    save_app_config(app_config)
+
     # Remember these details because /stop is a separate HTTP request.
     recording_start_info.update({
         "cameras_used": started,
@@ -144,7 +194,7 @@ def _download_one(camera, video_path: Path) -> None:
     camera.deleteAllFiles()
 
 
-def process_recording(task_id, cameras, recording_info, tasks, project_manager):
+def process_recording(task_id, cameras, recording_info, tasks, project_manager, calibration_state, app_config):
     """cameras: {serial: (camera, gopro_number)} for every camera that was stopped."""
     job = tasks[task_id]
 
@@ -181,10 +231,15 @@ def process_recording(task_id, cameras, recording_info, tasks, project_manager):
             trim_and_sync_videos,
         )
 
+        # Camera positions from the calibration + the sound source let the sync remove the
+        # sound's travel time to each camera (skipped if either is missing, as in tkinter).
+        camera_array = _calibration_camera_array(
+            calibration_state, app_config, project_manager, recording_info["project"])
         offsets = compute_sync_offsets(
             video_paths,
             output_dir=str(video_dir),
-            sound_source_position=recording_info["sound_source_position"],
+            camera_positions=_camera_positions_for_sync(camera_array, video_paths),
+            sound_source_position=recording_info["sound_source_position"] or None,
         )
         passed, reasons = evaluate_sync_acceptance(offsets)
 
@@ -231,6 +286,8 @@ def stop_recording(
     recording_start_info=recording_start_info,
     recording_background_tasks=recording_background_tasks,
     project_manager=Depends(get_project_manager),
+    calibration_state=Depends(get_calibration_state),
+    app_config=Depends(get_app_config),
 ):
     # A repeated /stop request returns the job that is already running.
     if recording_start_info.get("task_id"):
@@ -274,6 +331,8 @@ def stop_recording(
         recording_start_info,
         recording_background_tasks,
         project_manager,
+        calibration_state,
+        app_config,
     )
 
     return {"task_id": task_id, "status": "pending", "errors": errors}
