@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
-import TrialSetup from "../components/recording/trial-setup"
+import RecordTrial from "../components/recording/record-trial"
 import SessionTrials from "../components/recording/session-trials"
-import RecordPanel from "../components/recording/record-panel"
 import CameraGrid from "../components/recording/camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSelection, nextTrialName,
@@ -151,16 +150,13 @@ export default function RecordingTab() {
 
     return (
         <div className="flex gap-6 p-6 text-left flex-1">
-            <div className="w-[28rem] flex flex-col gap-6">
-                <TrialSetup
+            <div className="w-[38rem] flex flex-col gap-6">
+                <RecordTrial
                     trialName={trialName}
                     sound={sound}
                     locked={recording || busy || jobRunning}
                     onTrialNameChange={setTrialName}
                     onSoundChange={setSound}
-                />
-                <SessionTrials selection={selection} activeTrial={activeTrial} refreshKey={trialsVersion} />
-                <RecordPanel
                     startedAt={startedAt}
                     canStart={canStart}
                     busy={busy}
@@ -169,6 +165,8 @@ export default function RecordingTab() {
                     onStart={handleStart}
                     onStop={handleStop}
                 />
+                <SessionTrials selection={selection} activeTrial={activeTrial} refreshKey={trialsVersion} />
+
             </div>
 
             <CameraGrid cameras={cameras} disabled={recording || busy} />
