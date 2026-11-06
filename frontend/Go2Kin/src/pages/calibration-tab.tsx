@@ -5,6 +5,8 @@ import CharucoConfig from "../components/calibration/charuco-config";
 import { autoLoad, BUSY, getStatus } from "../components/calibration/calibration-api";
 import IntrinsicCalibration from "../components/calibration/intrinsic-calibration";
 import SceneUI from "../components/temp-ui-for-testing/scene-ui";
+import ExtrinsicCalibration from "../components/calibration/extrinsic-calibration";
+import SetOrigin from "../components/calibration/set-origin";
 
 // Empty for now: the intrinsic / extrinsic / origin panels will go here.
 export default function CalibrationTab() {
@@ -27,12 +29,8 @@ export default function CalibrationTab() {
             <div className="flex flex-col gap-[0.5rem] w-[45rem] shrink-0">
                 <CharucoConfig reloadKey={loadKey} />
                 <IntrinsicCalibration />
-                <section className="w-full text-left">
-                    <h2>Extrinsic Calibration</h2>
-                </section>
-                <section className="w-full text-left">
-                    <h2>Set Origin</h2>
-                </section>
+                <ExtrinsicCalibration />
+                <SetOrigin />
             </div>
 
             <SceneUI />

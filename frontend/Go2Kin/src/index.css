@@ -172,8 +172,8 @@ select:disabled {
 
 @layer components {
   .button-large {
-    width: 20rem;
-    height: 5rem;
+    width: 10rem;
+    height: 3.5rem;
     font-size: var(--fs-large);
     font-weight: var(--fw-medium);
     color: var(--bg-main);

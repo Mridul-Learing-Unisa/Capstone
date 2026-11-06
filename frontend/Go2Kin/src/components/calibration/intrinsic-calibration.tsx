@@ -27,7 +27,7 @@ function busyCamNum(status: CalibrationStatus | null) {
 // "Intrinsic Calibration" box: per camera, record a charuco video (or pick one), calibrate, show the RMSE.
 // Intrinsics stay on the server between visits, and the page auto-loads the last calibration like tkinter.
 export default function IntrinsicCalibration() {
-    const [userOpen, setUserOpen] = useState<boolean | null>(null)   // null = not toggled yet
+    const [open, setOpen] = useState(false)   // closed by default, like the Charuco panel
     const [status, setStatus] = useState<CalibrationStatus | null>(null)
     const [cameras, setCameras] = useState<Camera[]>([])
     const [paths, setPaths] = useState<Record<string, string>>({})   // typed / picked video path, by serial
@@ -56,8 +56,6 @@ export default function IntrinsicCalibration() {
     const calibratedCount = rows.filter(r => r.calibrated).length
     const allCalibrated = rows.length > 0 && calibratedCount === rows.length
     const failed = status?.status === "error" && status.stage === "intrinsic"
-    // open by default until every camera is calibrated, then it can stay collapsed
-    const open = userOpen ?? (status !== null && !allCalibrated)
 
     // icon left of the title
     let icon = <DisabledIcon />
@@ -118,8 +116,8 @@ export default function IntrinsicCalibration() {
                 tabIndex={0}
                 aria-expanded={open}
                 className="w-full flex items-center justify-between cursor-pointer select-none"
-                onClick={() => setUserOpen(!open)}
-                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setUserOpen(!open) } }}
+                onClick={() => setOpen(o => !o)}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(o => !o) } }}
             >
                 <div className="flex items-center gap-[0.5rem]" title={iconTitle}>
                     {icon}

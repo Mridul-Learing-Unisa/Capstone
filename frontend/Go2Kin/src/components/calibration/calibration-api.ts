@@ -82,8 +82,19 @@ export type CalibrationStatus = {
     intrinsics: IntrinsicRow[]
     intrinsic_count: number
     loaded_file: string | null
-    [key: string]: unknown        // extrinsic / origin fields, used by the other panels
+    extrinsic: ExtrinsicReport | null
+    has_extrinsics: boolean       // camera positions known (from a run this session or a loaded file)
+    origin_set: boolean
+    sync_issue: SyncIssue | null  // set when audio sync rejected the extrinsic recording
+    can_extrinsic: boolean        // at least one camera has intrinsics
+    can_origin: boolean
 }
+
+// rmse is null when the extrinsics came from a loaded file
+export type ExtrinsicReport = { rmse: number | null, n_cameras: number, n_points: number | null, level: "green" | "amber" | "red" }
+
+export type SyncIssue = { heading: string, subtext: string, table: string, reasons: string[] }
+
 
 export const BUSY = ["recording", "downloading", "syncing", "processing"]
 
@@ -116,4 +127,32 @@ export function calibrateIntrinsic(serial: string, videoPath?: string) {
 export async function listIntrinsicVideos(serial: string): Promise<VideoFile[]> {
     const data = await (await send(`/intrinsic/${serial}/videos`)).json()
     return data.videos
+}
+
+// ---------------------------------------------------------------------------
+// Extrinsic calibration + freshness
+// ---------------------------------------------------------------------------
+
+// records on every connected camera (at least 2, each with intrinsics); the countdown before it is ours
+export function startExtrinsicRecord() {
+    return send("/extrinsic/record/start", "POST")
+}
+
+// stops, then the server downloads -> syncs -> calibrates -> saves in the background (watch GET /status)
+export function stopExtrinsicRecord() {
+    return send("/extrinsic/record/stop", "POST")
+}
+
+// ---------------------------------------------------------------------------
+// Set origin
+// ---------------------------------------------------------------------------
+
+// records the board lying at the origin on every connected camera (needs extrinsics first)
+export function startOriginRecord() {
+    return send("/origin/record/start", "POST")
+}
+
+// stops, then the server downloads -> trims (no clap sync, the board is still) -> sets the origin -> saves
+export function stopOriginRecord() {
+    return send("/origin/record/stop", "POST")
 }
