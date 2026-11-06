@@ -8,6 +8,7 @@ import IntrinsicUI from "./components/temp-ui-for-testing/intrinsic-ui"
 import ExtrinsicUI from "./components/temp-ui-for-testing/extrinsic-ui"
 import RecordingUI from "./components/temp-ui-for-testing/recording-ui"
 import ProcessingUI from "./components/temp-ui-for-testing/processing-ui"
+import CalibrationTab from "./pages/calibration-tab.tsx"
 import ProjectSelector from "./components/projects/project-selector.tsx"
 import SubjectSelector from "./components/projects/subject-selector.tsx"
 import CalibrationStatus from "./components/projects/calibration-status.tsx"
@@ -51,12 +52,15 @@ function App() {
 
       <nav className="flex gap-2 px-6 pt-2 border-b border-[#BBBBBB]">
         <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
+        <NavLink to="/calibration" className={tabClass}>Calibration</NavLink>
         <NavLink to="/recording" className={tabClass}>Recording</NavLink>
       </nav>
 
-      <main className="flex flex-col flex-1">
+      {/* min-h-0 lets pages fill exactly the space between the tabs and the footer; anything taller scrolls here */}
+      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto">
         <Routes>
           <Route path="/" element={<TestingUI />} />
+          <Route path="/calibration" element={<CalibrationTab />} />
           <Route path="/recording" element={<RecordingTab />} />
         </Routes>
       </main>

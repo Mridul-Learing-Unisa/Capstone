@@ -86,7 +86,7 @@ export default function RecordTrial({ trialName, sound, locked, onTrialNameChang
             <div className="flex items-center gap-4 pl-[12rem] mt-2">
                 <button
                     type="button"
-                    className={`button-large w-40! h-14! disabled:cursor-not-allowed ${buttonColour}`}
+                    className={`button-large disabled:cursor-not-allowed ${buttonColour}`}
                     disabled={busy || (!recording && !canStart)}
                     onClick={recording ? onStop : onStart}
                 >
