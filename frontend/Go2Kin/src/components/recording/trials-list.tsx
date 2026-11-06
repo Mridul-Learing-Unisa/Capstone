@@ -81,7 +81,7 @@ export default function TrialsList({ selection, activeTrial, refreshKey, selecte
     else if (shown.length === 0) emptyText = "No trials in this session yet."
 
     return (
-        <section className="!bg-bg-secondary w-full flex flex-col gap-4 min-h-0">
+        <section className="!bg-bg-secondary w-full min-h-0 flex flex-col gap-4">
             <div className="flex gap-2">
                 <button type="button" disabled={shown.length === 0}
                     onClick={() => onSelectedChange(shown.map(t => t.trial_name))}>Select All</button>

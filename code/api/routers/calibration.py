@@ -295,6 +295,22 @@ def get_intrinsics(state: dict = Depends(get_calibration_state), app_config: dic
     return {"cameras": _intrinsic_summary(state, app_config)}
 
 
+@router.get("/intrinsic/{serial}/videos")
+def list_intrinsic_videos(
+    serial: str,
+    pm: ProjectManager = Depends(get_project_manager),
+    app_config: dict = Depends(get_app_config),
+    selection_state: dict = Depends(get_selection_state),
+):
+    """Intrinsic videos already recorded for this camera in the current project, newest first.
+    Stands in for the tkinter "Browse" file dialog: a browser can't hand the server a local path."""
+    cam_num = _cam_num(serial, app_config)
+    video_dir = _temp_video_dir(pm, _current_project(selection_state, app_config))
+    videos = [f for f in video_dir.glob(f"intrinsic_*_GP{cam_num}.*") if f.suffix.lower() == ".mp4"]
+    videos.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+    return {"videos": [{"name": f.name, "path": str(f), "modified": f.stat().st_mtime} for f in videos]}
+
+
 @router.post("/intrinsic/{serial}/record/start")
 def start_intrinsic_record(
     serial: str,

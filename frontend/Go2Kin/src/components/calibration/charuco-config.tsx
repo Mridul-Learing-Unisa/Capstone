@@ -57,7 +57,8 @@ function sameConfig(a: CharucoConfig, b: CharucoConfig) {
 
 // "Charuco Board Configuration" box at the top of the Calibration tab.
 // Loads the saved board, so it normally stays collapsed and only needs opening to change the board.
-export default function CharucoConfigPanel() {
+// reloadKey: bump to re-read the board, e.g. after a calibration file (which carries its own board) is loaded
+export default function CharucoConfigPanel({ reloadKey = 0 }: { reloadKey?: number }) {
     const [open, setOpen] = useState(false)
     const [saved, setSaved] = useState<CharucoConfig | null>(null)   // what the server uses for calibration
     const [draft, setDraft] = useState<Draft>(toDraft(DEFAULT_CHARUCO))
@@ -66,11 +67,15 @@ export default function CharucoConfigPanel() {
     const [message, setMessage] = useState("")
     const [error, setError] = useState("")
 
-    // load the saved board + the dictionary list once
+    // load the board in use (again whenever reloadKey changes)
     useEffect(() => {
         getCharuco()
-            .then(config => { setSaved(config); setDraft(toDraft(config)) })
+            .then(config => { setSaved(config); setDraft(toDraft(config)); setError("") })
             .catch(e => setError(`Couldn't load the saved board: ${(e as Error).message}`))
+    }, [reloadKey])
+
+    // the dictionary list never changes, so once is enough
+    useEffect(() => {
         getDictionaries()
             .then(list => { if (list.length) setDictionaries(list) })
             .catch(() => { /* keep the default so the select still works */ })

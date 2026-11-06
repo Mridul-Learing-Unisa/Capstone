@@ -58,3 +58,62 @@ export async function getDictionaries(): Promise<string[]> {
 export async function getBoardImage(config: CharucoConfig): Promise<Blob> {
     return (await send("/charuco/board-image", "POST", config)).blob()
 }
+
+// ---------------------------------------------------------------------------
+// Status + intrinsic calibration
+// ---------------------------------------------------------------------------
+
+export type IntrinsicRow = {
+    serial: string
+    cam_num: number
+    name: string                 // "GoPro 1"
+    calibrated: boolean
+    rmse: number | null          // px
+    frames_used: number | null   // null when it came from a loaded file
+    video: string | null         // file name of the video Calibrate will use, if any
+}
+
+// GET /status: one shared state for the whole tab (only one calibration step runs at a time)
+export type CalibrationStatus = {
+    status: "idle" | "recording" | "downloading" | "syncing" | "processing" | "complete" | "error"
+    stage: "intrinsic" | "extrinsic" | "origin" | null   // which step status/message are about
+    message: string
+    recording: { type: string, serials: string[] } | null
+    intrinsics: IntrinsicRow[]
+    intrinsic_count: number
+    loaded_file: string | null
+    [key: string]: unknown        // extrinsic / origin fields, used by the other panels
+}
+
+export const BUSY = ["recording", "downloading", "syncing", "processing"]
+
+export type VideoFile = { name: string, path: string, modified: number }
+
+export async function getStatus(): Promise<CalibrationStatus> {
+    return (await send("/status")).json()
+}
+
+// tkinter's startup load: last_calibration, else the project's latest. Returns false if there was none.
+export async function autoLoad(): Promise<boolean> {
+    const data = await (await send("/auto-load", "POST")).json()
+    return data.status !== "none"
+}
+
+export function startIntrinsicRecord(serial: string) {
+    return send(`/intrinsic/${serial}/record/start`, "POST")
+}
+
+// stops the camera, then the server downloads the video in the background (watch GET /status)
+export function stopIntrinsicRecord(serial: string) {
+    return send(`/intrinsic/${serial}/record/stop`, "POST")
+}
+
+// videoPath = a full path on the server machine; leave it out to use the video just recorded
+export function calibrateIntrinsic(serial: string, videoPath?: string) {
+    return send(`/intrinsic/${serial}/calibrate`, "POST", videoPath ? { video_path: videoPath } : undefined)
+}
+
+export async function listIntrinsicVideos(serial: string): Promise<VideoFile[]> {
+    const data = await (await send(`/intrinsic/${serial}/videos`)).json()
+    return data.videos
+}

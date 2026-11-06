@@ -240,12 +240,15 @@ select:disabled {
 }
 
 .charuco-config label span {
-  width: 7.5rem;
+  width: 10rem;
   text-align: right;
 }
 
 .charuco-config label input {
   width: 4rem;
+}
+
+.intrinsic-calibration {
 }
 
 .popup {
