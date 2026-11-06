@@ -12,7 +12,6 @@ import CalibrationTab from "./pages/calibration-tab.tsx"
 import ProjectSelector from "./components/projects/project-selector.tsx"
 import SubjectSelector from "./components/projects/subject-selector.tsx"
 import CalibrationStatus from "./components/projects/calibration-status.tsx"
-import CalibrationTab from "./pages/calibration-tab.tsx"
 import RecordingTab from "./pages/recording-tab.tsx"
 import Cameras from "./components/cameras/cameras.tsx"
 
@@ -52,10 +51,6 @@ function App() {
       </header>
 
       <nav className="flex gap-2 px-6 pt-2 border-b border-[#BBBBBB]">
-<<<<<<< HEAD
-        <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
-=======
->>>>>>> e53e591 (Calliberation tab)
         <NavLink to="/calibration" className={tabClass}>Calibration</NavLink>
         <NavLink to="/recording" className={tabClass}>Recording</NavLink>
         <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
@@ -66,10 +61,7 @@ function App() {
         <Routes>
           <Route path="/" element={<TestingUI />} />
           <Route path="/calibration" element={<CalibrationTab />} />
-<<<<<<< HEAD
-=======
           <Route path="/calliberation" element={<CalibrationTab />} />
->>>>>>> e53e591 (Calliberation tab)
           <Route path="/recording" element={<RecordingTab />} />
         </Routes>
       </main>

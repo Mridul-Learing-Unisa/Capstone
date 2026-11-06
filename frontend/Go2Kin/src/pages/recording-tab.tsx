@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react"
 import RecordTrial from "../components/recording/record-trial"
-<<<<<<< HEAD
-=======
 // import SessionTrials from "../components/recording/session-trials"
->>>>>>> e53e591 (Calliberation tab)
 // import CameraGrid from "../components/recording/camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSavedSoundSource, getSelection, nextTrialName,
