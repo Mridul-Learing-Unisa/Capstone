@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Calibration tab, replacing the tkinter CalibrationTab (code/GUI/calibration_tab.py).
 
 import { useEffect, useState } from "react";
@@ -37,3 +38,72 @@ export default function CalibrationTab() {
         </div>
     )
 }
+=======
+import { Suspense, useEffect, useState } from "react"
+import LoadBar from "../components/calibration/load-bar"
+import CharucoCard from "../components/calibration/charuco-card"
+import IntrinsicCard from "../components/calibration/intrinsic-card"
+import ExtrinsicCard from "../components/calibration/extrinsic-card"
+import OriginCard from "../components/calibration/origin-card"
+import CalibrationViewport from "../components/calibration/calibration-viewport"
+import {
+    autoLoadCalibration,
+    getCalibrationStatus,
+    type CalibrationStatus,
+} from "../components/calibration/calibration-api"
+
+export default function CalibrationTab() {
+    const [status, setStatus] = useState<CalibrationStatus | null>(null)
+
+    async function refreshStatus() {
+        try {
+            const data = await getCalibrationStatus()
+            setStatus(data)
+        } catch {
+            // backend unreachable
+        }
+    }
+
+    // Initial mount: auto-load latest calibration (as tkinter does), then poll status
+    useEffect(() => {
+        autoLoadCalibration()
+            .then(refreshStatus)
+            .catch(() => refreshStatus())
+
+        const pollTimer = setInterval(refreshStatus, 1000)
+        return () => clearInterval(pollTimer)
+    }, [])
+
+    return (
+        <div className="flex flex-col flex-1 p-4 md:p-6 gap-4 max-w-[1600px] w-full mx-auto">
+            {/* Top Toolbar: Load / Delete Actions */}
+            <LoadBar loadedFile={status?.loaded_file ?? null} onReload={refreshStatus} />
+
+            {/* Two-Column Grid: Pipeline on Left, 3D Viewport on Right */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+                {/* Left Column: Calibration Pipeline (cards) */}
+                <div className="lg:col-span-5 xl:col-span-5 flex flex-col gap-3.5">
+                    <CharucoCard />
+                    <IntrinsicCard status={status} onReload={refreshStatus} />
+                    <ExtrinsicCard status={status} onReload={refreshStatus} />
+                    <OriginCard status={status} onReload={refreshStatus} />
+                </div>
+
+                {/* Right Column: 3D Camera Position Viewport */}
+                <div className="lg:col-span-7 xl:col-span-7 flex flex-col h-full min-h-[500px]">
+                    <Suspense
+                        fallback={
+                            <div className="flex-1 flex items-center justify-center bg-[#2A2B2E] rounded-xl border border-[#BBBBBB] text-white/50 text-sm">
+                                Loading 3D Viewport...
+                            </div>
+                        }
+                    >
+                        <CalibrationViewport />
+                    </Suspense>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+>>>>>>> e53e591 (Calliberation tab)

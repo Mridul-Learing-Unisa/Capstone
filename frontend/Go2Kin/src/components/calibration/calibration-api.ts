@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 // Small helpers for the calibration endpoints in code/api/routers/calibration.py
+=======
+// API client for calibration endpoints in code/api/routers/calibration.py
+>>>>>>> e53e591 (Calliberation tab)
 
 const HOST = "http://localhost:8000"
 const API = HOST + "/api/calibration"
@@ -7,17 +11,79 @@ export type CharucoConfig = {
     columns: number
     rows: number
     square_size_cm: number
+<<<<<<< HEAD
     aruco_scale: number      // marker size as a fraction of the square
+=======
+    aruco_scale: number
+>>>>>>> e53e591 (Calliberation tab)
     dict_name: string
     inverted: boolean
 }
 
+<<<<<<< HEAD
 // Same defaults as the tkinter tab and the server (DEFAULT_CHARUCO), used until the saved config loads
 export const DEFAULT_CHARUCO: CharucoConfig = {
     columns: 5, rows: 7, square_size_cm: 11.7, aruco_scale: 0.75, dict_name: "DICT_4X4_50", inverted: false,
 }
 
 // FastAPI errors come back as a string, a {message} object or a list, so turn any of them into text
+=======
+export const DEFAULT_CHARUCO: CharucoConfig = {
+    columns: 5,
+    rows: 7,
+    square_size_cm: 11.7,
+    aruco_scale: 0.75,
+    dict_name: "DICT_4X4_50",
+    inverted: false,
+}
+
+export type IntrinsicCam = {
+    serial: string
+    cam_num: number
+    name: string
+    calibrated: boolean
+    rmse: number | null
+    frames_used: number | null
+    video: string | null
+}
+
+export type ExtrinsicReport = {
+    rmse: number | null
+    n_cameras: number
+    n_points: number | null
+    level: string
+}
+
+export type SyncIssue = {
+    heading: string
+    subtext: string
+    table: string
+    reasons: string[]
+}
+
+export type CalibrationStatus = {
+    status: string // idle / recording / downloading / syncing / processing / complete / error
+    stage: "extrinsic" | "origin" | "intrinsic" | null
+    message: string
+    recording: { type: string; serials: string[] } | null
+    intrinsics: IntrinsicCam[]
+    intrinsic_count: number
+    extrinsic: ExtrinsicReport | null
+    has_extrinsics: boolean
+    origin_set: boolean
+    loaded_file: string | null
+    sync_issue: SyncIssue | null
+    can_extrinsic: boolean
+    can_origin: boolean
+    can_apply: boolean
+}
+
+export type CalibrationFile = {
+    name: string
+    modified: number
+}
+
+>>>>>>> e53e591 (Calliberation tab)
 function errorText(detail: unknown): string | null {
     if (typeof detail === "string") return detail
     if (Array.isArray(detail)) return detail.map(d => d?.msg ?? String(d)).join("; ")
@@ -25,13 +91,19 @@ function errorText(detail: unknown): string | null {
     return null
 }
 
+<<<<<<< HEAD
 async function send(path: string, method = "GET", body?: unknown) {
     const res = await fetch(API + path, {
+=======
+async function request(path: string, method = "GET", body?: unknown) {
+    const res = await fetch(HOST + path, {
+>>>>>>> e53e591 (Calliberation tab)
         method,
         headers: body ? { "Content-Type": "application/json" } : undefined,
         body: body ? JSON.stringify(body) : undefined,
     })
     if (!res.ok) {
+<<<<<<< HEAD
         const data = await res.json().catch(() => null)
         throw new Error(errorText(data?.detail) ?? `${method} ${path} failed (${res.status})`)
     }
@@ -156,3 +228,101 @@ export function startOriginRecord() {
 export function stopOriginRecord() {
     return send("/origin/record/stop", "POST")
 }
+=======
+        const payload = await res.json().catch(() => null)
+        const msg = errorText(payload?.detail) ?? `HTTP ${res.status}`
+        throw new Error(msg)
+    }
+    return res.json().catch(() => null)
+}
+
+export async function getCharucoConfig(): Promise<CharucoConfig> {
+    return request("/api/calibration/charuco")
+}
+
+export async function saveCharucoConfig(config: CharucoConfig): Promise<{ status: string }> {
+    return request("/api/calibration/charuco", "POST", config)
+}
+
+export async function getCharucoDictionaries(): Promise<string[]> {
+    const res = await request("/api/calibration/charuco/dictionaries")
+    return res?.dictionaries ?? []
+}
+
+export async function downloadBoardImage(config: CharucoConfig): Promise<void> {
+    const res = await fetch(API + "/charuco/board-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+    })
+    if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        throw new Error(errorText(payload?.detail) ?? `HTTP ${res.status}`)
+    }
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `charuco_${config.columns}x${config.rows}_${config.dict_name}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+}
+
+export async function getCalibrationStatus(): Promise<CalibrationStatus> {
+    return request("/api/calibration/status")
+}
+
+export async function startIntrinsicRecord(serial: string): Promise<void> {
+    return request(`/api/calibration/intrinsic/${encodeURIComponent(serial)}/record/start`, "POST")
+}
+
+export async function stopIntrinsicRecord(serial: string): Promise<void> {
+    return request(`/api/calibration/intrinsic/${encodeURIComponent(serial)}/record/stop`, "POST")
+}
+
+export async function calibrateIntrinsic(serial: string, video_path?: string): Promise<void> {
+    return request(`/api/calibration/intrinsic/${encodeURIComponent(serial)}/calibrate`, "POST", video_path ? { video_path } : undefined)
+}
+
+export async function startExtrinsicRecord(): Promise<void> {
+    return request("/api/calibration/extrinsic/record/start", "POST")
+}
+
+export async function stopExtrinsicRecord(): Promise<void> {
+    return request("/api/calibration/extrinsic/record/stop", "POST")
+}
+
+export async function startOriginRecord(): Promise<void> {
+    return request("/api/calibration/origin/record/start", "POST")
+}
+
+export async function stopOriginRecord(): Promise<void> {
+    return request("/api/calibration/origin/record/stop", "POST")
+}
+
+export async function listCalibrationFiles(): Promise<CalibrationFile[]> {
+    const res = await request("/api/calibration/files")
+    return res?.files ?? []
+}
+
+export async function loadCalibration(name: string): Promise<unknown> {
+    return request("/api/calibration/load", "POST", { name })
+}
+
+export async function loadIntrinsics(name: string): Promise<unknown> {
+    return request("/api/calibration/load-intrinsics", "POST", { name })
+}
+
+export async function autoLoadCalibration(): Promise<unknown> {
+    return request("/api/calibration/auto-load", "POST")
+}
+
+export async function deleteTempVideos(): Promise<{ deleted: number }> {
+    return request("/api/calibration/temp-videos", "DELETE")
+}
+
+export async function applyCalibration(): Promise<{ status: string; filename: string }> {
+    return request("/api/calibration/apply", "POST")
+}
+
+>>>>>>> e53e591 (Calliberation tab)
