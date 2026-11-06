@@ -172,7 +172,9 @@ export default function RecordingTab() {
     else if (jobRunning) activeTrial = jobTrial
 
     return (
-        <div className="w-full flex gap-[1.5rem] p-[1.5rem]">
+        // fill the height between the tabs and the footer, so the trials list can run full height.
+        // pb is 1rem because the footer adds its own 0.5rem, making the gap 1.5rem top and bottom.
+        <div className="w-full flex-1 min-h-0 flex gap-[1.5rem] px-[1.5rem] pt-[1.5rem] pb-[1rem]">
             <div className="w-[38rem] flex flex-col gap-6 shrink-0">
                 <RecordTrial
                     trialName={trialName}

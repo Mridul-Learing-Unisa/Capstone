@@ -56,7 +56,8 @@ function App() {
         <NavLink to="/recording" className={tabClass}>Recording</NavLink>
       </nav>
 
-      <main className="flex flex-col flex-1">
+      {/* min-h-0 lets pages fill exactly the space between the tabs and the footer; anything taller scrolls here */}
+      <main className="flex flex-col flex-1 min-h-0 overflow-y-auto">
         <Routes>
           <Route path="/" element={<TestingUI />} />
           <Route path="/calibration" element={<CalibrationTab />} />

@@ -72,7 +72,8 @@ body {
 #root {
   max-width: 100%;
   text-align: center;
-  min-height: 100svh;
+  /* exactly the window height: header + tabs + footer stay on screen and <main> scrolls if it must */
+  height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
