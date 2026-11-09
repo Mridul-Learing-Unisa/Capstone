@@ -10,15 +10,15 @@ export type Camera = {
 }
 
 // per camera result from the "/all" endpoints, by serial
-export type AllResults = Record<string, { status: string, detail?: unknown }>
+export type AllResults = Record<string, { status: string; detail?: unknown }>
 
-// Same options as the tkinter bottom bar (Hero 12, 50Hz anti-flicker). The camera rejects
-// combinations it can't do (e.g. 4K @ 200), so those come back as an error.
-export const RESOLUTIONS = ["1080", "2.7K", "4K"]
-export const FPS_OPTIONS = ["25", "50", "100", "200"]
-// tkinter's defaults, used until a camera profile says otherwise
-export const DEFAULT_RESOLUTION = "4K"
-export const DEFAULT_FPS = "50"
+// Standard resolutions and FPS options supported by GoPro Hero 10/11/12
+export const RESOLUTIONS = ["1080", "2.7K", "4K", "5.3K"]
+export const FPS_OPTIONS = ["24", "25", "30", "50", "60", "100", "120", "200", "240"]
+
+// Defaults matching the Figma design mockup
+export const DEFAULT_RESOLUTION = "1080"
+export const DEFAULT_FPS = "30"
 
 // FastAPI errors come back as a string, a {message} object or a list, so turn any of them into text
 export function errorText(detail: unknown): string {
@@ -50,13 +50,17 @@ export async function connectAll(): Promise<AllResults> {
     return data.results
 }
 
-export function disconnectCamera(serial: string) {
-    return request(`/api/cameras/${serial}/disconnect`, "POST")
+export function connectCamera(serial: string): Promise<{ status: string; warnings?: string[] }> {
+    return request(`/api/cameras/${encodeURIComponent(serial)}/connect`, "POST")
+}
+
+export function disconnectCamera(serial: string): Promise<{ status: string }> {
+    return request(`/api/cameras/${encodeURIComponent(serial)}/disconnect`, "POST")
 }
 
 // resolution + FPS the camera was last set to, from its saved profile (works while disconnected)
-export async function getSavedSettings(serial: string): Promise<{ resolution?: string, fps?: string }> {
-    const data = await request(`/api/cameras/${serial}/settings`)
+export async function getSavedSettings(serial: string): Promise<{ resolution?: string; fps?: string }> {
+    const data = await request(`/api/cameras/${encodeURIComponent(serial)}/settings`)
     const settings = data.profile?.current_settings ?? {}
     return { resolution: settings["2"]?.value_name, fps: settings["3"]?.value_name }
 }
@@ -72,15 +76,15 @@ export async function setFpsAll(fps: string): Promise<AllResults> {
 }
 
 // only one camera can preview at a time, starting a new one stops the old one on the server
-export function startPreview(serial: string) {
-    return request(`/api/preview/${serial}/start`, "POST")
+export function startPreview(serial: string): Promise<{ status: string; serial: string; port: number }> {
+    return request(`/api/preview/${encodeURIComponent(serial)}/start`, "POST")
 }
 
-export function stopPreview(serial: string) {
-    return request(`/api/preview/${serial}/stop`, "POST")
+export function stopPreview(serial: string): Promise<{ status: string; serial: string }> {
+    return request(`/api/preview/${encodeURIComponent(serial)}/stop`, "POST")
 }
 
 // MJPEG stream, works straight in an <img src>
-export function previewUrl(serial: string) {
-    return `${HOST}/api/preview/${serial}/stream`
+export function previewUrl(serial: string): string {
+    return `${HOST}/api/preview/${encodeURIComponent(serial)}/stream`
 }

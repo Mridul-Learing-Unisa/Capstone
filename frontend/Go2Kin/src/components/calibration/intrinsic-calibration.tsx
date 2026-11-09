@@ -4,6 +4,7 @@ import SuccessIcon from "../icons/success-icon"
 import FailIcon from "../icons/fail-icon"
 import ProcessingIcon from "../icons/processing-icon"
 import DisabledIcon from "../icons/disabled-icon"
+import BatteryIcon from "../icons/battery-icon"
 import { getCameras, type Camera } from "../cameras/cameras-api"
 import {
     BUSY, calibrateIntrinsic, getStatus, listIntrinsicVideos, startIntrinsicRecord, stopIntrinsicRecord,
@@ -136,7 +137,8 @@ export default function IntrinsicCalibration() {
                     {rows.length === 0 && <p className="text-small">No cameras set up in go2kin_config.json</p>}
 
                     {rows.map(row => {
-                        const connected = cameras.find(c => c.serial === row.serial)?.status === "connected"
+                        const cam = cameras.find(c => c.serial === row.serial)
+                        const connected = cam?.status === "connected"
                         const recordingThis = status?.status === "recording"
                             && status.recording?.type === "intrinsic" && !!status.recording.serials.includes(row.serial)
                         const thisBusy = activeCam === row.cam_num && busy
@@ -149,7 +151,19 @@ export default function IntrinsicCalibration() {
                         return (
                             // div, not label: a label would forward clicks on "Camera 1:" to the Record button
                             <div key={row.serial} className="flex flex-col items-start gap-1 w-full">
-                                <span>Camera {row.cam_num}:</span>
+                                <div className="flex items-center gap-2">
+                                    <span>Camera {row.cam_num}:</span>
+                                    {connected ? (
+                                        <span className="text-small text-text-secondary flex items-center gap-1 font-mono">
+                                            <BatteryIcon level={cam?.battery} />
+                                            <span className={cam?.battery != null && cam.battery <= 20 ? "text-error font-medium" : ""}>
+                                                {cam?.battery != null ? `${cam.battery}%` : "—"}
+                                            </span>
+                                        </span>
+                                    ) : (
+                                        <span className="text-small text-text-secondary italic">(disconnected)</span>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-[1.5rem]">
                                     <button
                                         type="button"

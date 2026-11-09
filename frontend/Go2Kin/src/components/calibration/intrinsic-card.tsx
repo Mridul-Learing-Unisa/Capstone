@@ -1,7 +1,9 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import SuccessIcon from "../icons/success-icon"
 import ProcessingIcon from "../icons/processing-icon"
 import DisabledIcon from "../icons/disabled-icon"
+import BatteryIcon from "../icons/battery-icon"
+import { getCameras, type Camera } from "../cameras/cameras-api"
 import {
     calibrateIntrinsic,
     startIntrinsicRecord,
@@ -19,6 +21,15 @@ export default function IntrinsicCard({ status, onReload }: IntrinsicCardProps) 
     const [expanded, setExpanded] = useState(false)
     const [customPaths, setCustomPaths] = useState<Record<string, string>>({})
     const [actionMsg, setActionMsg] = useState<string | null>(null)
+    const [cameras, setCameras] = useState<Camera[]>([])
+
+    useEffect(() => {
+        getCameras().then(setCameras).catch(() => {})
+        const timer = setInterval(() => {
+            getCameras().then(setCameras).catch(() => {})
+        }, 3000)
+        return () => clearInterval(timer)
+    }, [])
 
     const intrinsics = status?.intrinsics ?? []
     const total = intrinsics.length
@@ -114,13 +125,27 @@ export default function IntrinsicCard({ status, onReload }: IntrinsicCardProps) 
                                         key={cam.serial}
                                         className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-white border border-[#BBBBBB] rounded-lg text-xs"
                                     >
-                                        <div className="flex items-center gap-2 min-w-[100px]">
+                                        <div className="flex items-center gap-2 min-w-[130px]">
                                             <span
                                                 className={`w-2 h-2 rounded-full ${
                                                     cam.calibrated ? "bg-[#00BE13]" : "bg-[#BBBBBB]"
                                                 }`}
                                             />
                                             <span className="font-semibold text-[#121212]">{cam.name}</span>
+                                            {(() => {
+                                                const liveCam = cameras.find(c => c.serial === cam.serial)
+                                                if (liveCam?.status === "connected" && liveCam.battery !== null) {
+                                                    return (
+                                                        <span className="text-[11px] text-[#666666] font-mono flex items-center gap-1">
+                                                            <BatteryIcon level={liveCam.battery} />
+                                                            <span className={liveCam.battery <= 20 ? "text-[#F83F23] font-bold" : ""}>
+                                                                {liveCam.battery}%
+                                                            </span>
+                                                        </span>
+                                                    )
+                                                }
+                                                return null
+                                            })()}
                                         </div>
 
                                         <div className="flex items-center gap-2">
