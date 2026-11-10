@@ -53,7 +53,7 @@ function errorText(detail: unknown): string | null {
     return null
 }
 
-async function request(path: string, method = "GET", body?: unknown) {
+export async function request(path: string, method = "GET", body?: unknown) {
     const res = await fetch(HOST + path, {
         method,
         headers: body ? { "Content-Type": "application/json" } : undefined,
