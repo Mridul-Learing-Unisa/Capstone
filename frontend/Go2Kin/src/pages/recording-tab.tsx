@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import RecordTrial from "../components/recording/record-trial"
 // import SessionTrials from "../components/recording/session-trials"
 // import CameraGrid from "../components/recording/camera-grid"
@@ -164,6 +164,8 @@ export default function RecordingTab() {
         setBusy(false)
     }
 
+    const reloadTrials = useCallback(() => setTrialsVersion(v => v + 1), [])
+
     // ticks from another session don't count, so switching session clears them
     const sessionKey = `${selection.project}/${selection.session}`
     const selectedTrials = picked.session === sessionKey ? picked.names : []
@@ -191,7 +193,11 @@ export default function RecordingTab() {
                     onStart={handleStart}
                     onStop={handleStop}
                 />
-                <ProcessTrials />
+                <ProcessTrials
+                    selection={selection}
+                    selected={selectedTrials}
+                    onFinished={reloadTrials}
+                />
             </div>
 
             <TrialsList
