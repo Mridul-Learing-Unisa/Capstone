@@ -4,7 +4,6 @@ import DisconnectedIcon from "../icons/disconnected-icon"
 import BatteryIcon from "../icons/battery-icon"
 import {
     connectAll,
-    connectCamera,
     DEFAULT_FPS,
     DEFAULT_RESOLUTION,
     disconnectCamera,
@@ -117,37 +116,6 @@ export default function Cameras() {
         setBusy("")
     }
 
-    async function handleConnectCamera(serial: string) {
-        const cam = cameras.find(c => c.serial === serial)
-        setError("")
-        setBusy(`Connecting ${cam?.name ?? "camera"}...`)
-        try {
-            await connectCamera(serial)
-            if (resolution) setResolutionAll(resolution).catch(() => { })
-            if (fps) setFpsAll(fps).catch(() => { })
-        } catch (e) {
-            setError((e as Error).message)
-        }
-        try { setCameras(await getCameras()) } catch { }
-        setBusy("")
-    }
-
-    async function handleDisconnectCamera(serial: string) {
-        const cam = cameras.find(c => c.serial === serial)
-        setError("")
-        if (preview === serial) {
-            setPreview(null)
-        }
-        setBusy(`Disconnecting ${cam?.name ?? "camera"}...`)
-        try {
-            await disconnectCamera(serial)
-        } catch (e) {
-            setError((e as Error).message)
-        }
-        try { setCameras(await getCameras()) } catch { }
-        setBusy("")
-    }
-
     // Apply to every connected camera; fall back to old value if cameras reject it
     async function applyAll(value: string, old: string, set: (v: string) => void, send: (v: string) => Promise<AllResults>) {
         setError("")
@@ -170,13 +138,18 @@ export default function Cameras() {
 
     async function handlePreview(serial: string) {
         const cam = cameras.find(c => c.serial === serial)
+        if (busy || previewStarting) return
         if (preview === serial) {
             setPreview(null)
             setStreamError(false)
             setStreamLoading(false)
+            setBusy("Stopping preview...")
             try { await stopPreview(serial) } catch { /* ignore if already stopped */ }
+            finally { setBusy("") }
             return
         }
+
+        if (cam?.status !== "connected") return
 
         setError("")
         setStreamError(false)
@@ -184,12 +157,10 @@ export default function Cameras() {
         setPreviewStarting(serial)
 
         try {
-            // If camera is not connected yet, connect it first
-            if (cam?.status !== "connected") {
-                setBusy(`Connecting ${cam?.name ?? "camera"}...`)
-                await connectCamera(serial)
-                const latest = await getCameras()
-                setCameras(latest)
+            // Release the previous stream before starting another camera.
+            if (preview) {
+                setPreview(null)
+                await stopPreview(preview)
             }
 
             setBusy(`Starting ${cam?.name ?? "camera"} preview...`)
@@ -213,71 +184,44 @@ export default function Cameras() {
     else if (!statusText && cameras.length === 0) statusText = "No cameras configured"
 
     return (
-        <section className="flex flex-wrap items-center justify-between gap-4 py-2 px-4 bg-white border border-[#BBBBBB] rounded-xl shadow-xs">
-            {/* Cameras Status + Preview/Connect Buttons */}
-            <div className="flex flex-wrap items-center gap-6">
+        <section className="flex flex-wrap items-center gap-[4rem]">
+            {/* Camera status, battery, and individual preview buttons */}
+            <div className="flex flex-wrap items-center">
                 {[0, 1, 2, 3].map(i => {
                     const cam = cameras[i]
                     const isConnected = cam?.status === "connected"
                     const isError = cam?.status === "error"
 
-                    let previewText = isConnected ? "Preview" : "Connect"
+                    const battery = isConnected ? cam.battery : null
+
+                    let previewText = "Preview"
                     if (cam && previewStarting === cam.serial) previewText = "Starting..."
-                    else if (cam && preview === cam.serial) previewText = "Stop"
+                    else if (cam && preview === cam.serial) previewText = "Stop Preview"
 
                     return (
-                        <div key={i} className="camera-preview flex flex-col items-start gap-1">
+                        <div key={i} className="camera-preview flex flex-col items-start">
                             <div
-                                className="status flex items-center gap-1.5 cursor-pointer hover:opacity-80"
-                                onClick={() => cam && (isConnected ? handleDisconnectCamera(cam.serial) : handleConnectCamera(cam.serial))}
-                                title={
-                                    isError
-                                        ? "Connected but not responding. Click to disconnect."
-                                        : isConnected
-                                            ? "Connected. Click to disconnect."
-                                            : "Disconnected. Click to connect."
-                                }
+                                className="status flex items-center gap-1.5"
+                                title={isError ? "Connected but not responding" : isConnected ? "Connected" : "Disconnected"}
                             >
                                 {isConnected ? <ConnectedIcon /> : <DisconnectedIcon />}
-                                <span className="text-xs font-semibold text-[#121212]">
-                                    {cam?.name ?? `GoPro ${i + 1}`}
-                                </span>
-                                {isConnected && (
-                                    <span
-                                        className="text-[11px] text-[#666666] font-mono flex items-center gap-0.5 ml-1"
-                                        title={cam?.battery != null ? `Battery: ${cam.battery}%` : "Battery unknown"}
-                                    >
-                                        <BatteryIcon level={cam?.battery} />
-                                        <span className={cam?.battery != null && cam.battery <= 20 ? "text-[#F83F23] font-bold" : ""}>
-                                            {cam?.battery != null ? `${cam.battery}%` : "—"}
-                                        </span>
+                                <span>{cam?.name ?? `GoPro ${i + 1}`}</span>
+                                <span
+                                    className="flex items-center gap-0.5 ml-1"
+                                    title={battery != null ? `Battery: ${battery}%` : "Battery unavailable"}
+                                >
+                                    <BatteryIcon level={battery} />
+                                    <span className={battery != null && battery <= 20 ? "text-[#F83F23] font-bold" : ""}>
+                                        {battery != null ? `${battery}%` : "--%"}
                                     </span>
-                                )}
-                                {isConnected && (
-                                    <button
-                                        type="button"
-                                        title="Disconnect camera"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleDisconnectCamera(cam.serial)
-                                        }}
-                                        className="text-[10px] text-[#888888] hover:text-[#F83F23] ml-0.5 cursor-pointer"
-                                    >
-                                        ✕
-                                    </button>
-                                )}
+                                </span>
                             </div>
 
                             <button
                                 type="button"
-                                disabled={!cam || (previewStarting !== null && previewStarting !== cam.serial) || (!!busy && !previewStarting)}
+                                disabled={!isConnected || !!busy || previewStarting !== null}
+                                title={isConnected ? "Preview this camera" : "Use Connect All to connect cameras first"}
                                 onClick={() => cam && handlePreview(cam.serial)}
-                                className={`px-3 py-1 rounded-md text-xs font-medium cursor-pointer shadow-xs transition-colors ${preview === cam?.serial
-                                        ? "bg-[#F83F23] text-white hover:opacity-90"
-                                        : isConnected
-                                            ? "bg-white border border-[#BBBBBB] text-[#121212] hover:bg-gray-100"
-                                            : "bg-[#EBEBEB] border border-[#BBBBBB] text-[#666666] hover:bg-white hover:text-[#121212]"
-                                    }`}
                             >
                                 {previewText}
                             </button>
@@ -294,7 +238,6 @@ export default function Cameras() {
                             type="button"
                             disabled={!!busy}
                             onClick={handleDisconnectAll}
-                            className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-white border border-[#BBBBBB] text-[#121212] hover:bg-gray-100 shadow-xs cursor-pointer disabled:opacity-50"
                         >
                             Disconnect All
                         </button>
@@ -303,7 +246,6 @@ export default function Cameras() {
                                 type="button"
                                 disabled={!!busy}
                                 onClick={handleConnectAll}
-                                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-[#00BE13] text-white hover:opacity-90 shadow-xs cursor-pointer disabled:opacity-50"
                             >
                                 Connect All
                             </button>
@@ -314,7 +256,6 @@ export default function Cameras() {
                         type="button"
                         disabled={!!busy || cameras.length === 0}
                         onClick={handleConnectAll}
-                        className="px-5 py-1.5 rounded-lg text-xs font-semibold bg-white border border-[#BBBBBB] text-[#121212] hover:bg-gray-100 shadow-xs cursor-pointer disabled:opacity-50 min-w-[7.5rem]"
                     >
                         Connect All
                     </button>
@@ -323,7 +264,7 @@ export default function Cameras() {
 
             {/* Resolution and FPS Dropdowns */}
             <div className="flex items-center gap-4">
-                <label className="resolution flex items-center gap-1.5 text-xs text-[#666666] font-medium">
+                <label className="resolution flex items-center gap-1">
                     Resolution:
                     <select
                         className="bg-[#EBEBEB] border border-[#BBBBBB] rounded-md px-2 py-1 text-xs text-[#121212] cursor-pointer"
@@ -339,7 +280,7 @@ export default function Cameras() {
                     </select>
                 </label>
 
-                <label className="fps flex items-center gap-1.5 text-xs text-[#666666] font-medium">
+                <label className="fps flex items-center gap-1">
                     FPS:
                     <select
                         className="bg-[#EBEBEB] border border-[#BBBBBB] rounded-md px-2 py-1 text-xs text-[#121212] cursor-pointer"
@@ -374,6 +315,7 @@ export default function Cameras() {
                         </div>
                         <button
                             type="button"
+                            disabled={!!busy || previewStarting !== null}
                             onClick={() => handlePreview(previewCam.serial)}
                             className="text-xs px-2.5 py-1 bg-white border border-[#BBBBBB] rounded hover:bg-gray-100 cursor-pointer font-medium"
                         >

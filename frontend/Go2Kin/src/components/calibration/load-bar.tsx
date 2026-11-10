@@ -39,23 +39,15 @@ export default function LoadBar({ loadedFile, onReload }: LoadBarProps) {
 
     return (
         <>
-            <div className="flex flex-wrap items-center justify-between gap-3 py-2 px-1">
-                <div className="flex flex-wrap items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setLoadType("calibration")}
-                        className="px-3 py-1.5 bg-white border border-[#BBBBBB] rounded-md text-xs font-medium text-[#121212] hover:bg-gray-50 shadow-xs cursor-pointer"
-                    >
+            <div className="flex flex-wrap items-center justify-between mb-[1rem]">
+                <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={() => setLoadType("calibration")}>
                         Load Calibration
                     </button>
-                    <button
-                        type="button"
-                        onClick={() => setLoadType("intrinsics")}
-                        className="px-3 py-1.5 bg-white border border-[#BBBBBB] rounded-md text-xs font-medium text-[#121212] hover:bg-gray-50 shadow-xs cursor-pointer"
-                    >
+                    <button type="button" onClick={() => setLoadType("intrinsics")}>
                         Load Intrinsics
                     </button>
-                    <span className="text-xs text-[#666666] font-mono truncate max-w-xs md:max-w-md">
+                    <span className="text-small">
                         {statusMsg
                             ? statusMsg
                             : loadedFile
@@ -69,7 +61,6 @@ export default function LoadBar({ loadedFile, onReload }: LoadBarProps) {
                         type="button"
                         onClick={handleDeleteVideos}
                         disabled={isDeleting}
-                        className="px-3 py-1.5 bg-white border border-[#BBBBBB] rounded-md text-xs font-medium text-[#121212] hover:bg-gray-50 shadow-xs cursor-pointer disabled:opacity-50"
                     >
                         {isDeleting ? "Deleting..." : "Delete Videos"}
                     </button>

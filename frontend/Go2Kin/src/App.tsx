@@ -15,7 +15,7 @@ import CalibrationStatus from "./components/projects/calibration-status.tsx"
 import RecordingTab from "./pages/recording-tab.tsx"
 import Cameras from "./components/cameras/cameras.tsx"
 
-const SceneUI = lazy(() => import("./components/temp-ui-for-testing/scene-ui"))
+const SceneUI = lazy(() => import("./components/calibration/calibration-scene.tsx"))
 
 // the temp panels for poking each API by hand, kept on the home page for now
 function TestingUI() {

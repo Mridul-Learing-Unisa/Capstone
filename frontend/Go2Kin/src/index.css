@@ -220,6 +220,7 @@ select:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  width: 12rem;
 }
 
 .camera-preview .status {

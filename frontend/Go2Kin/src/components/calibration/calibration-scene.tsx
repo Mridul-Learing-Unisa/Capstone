@@ -162,7 +162,7 @@ function SceneContents({ scene, labels, labelRefs, viewKey }: {
 
 // Temporary UI for the 3D camera-position preview (GET /api/calibration/scene).
 // Refetches whenever the current calibration changes (extrinsic, origin, load/apply).
-function SceneUI() {
+function CalibrationScene() {
     const [scene, setScene] = useState<Scene | null>(null)
     const [error, setError] = useState('')
     const [calibKey, setCalibKey] = useState<string | null>(null)
@@ -209,7 +209,7 @@ function SceneUI() {
     // min-h keeps it visible on pages that don't give it a height, like the Testing UI.
     return (
         <div className="flex-1 min-w-0 min-h-[20rem] flex flex-col gap-[0.5rem]">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-[1rem]">
                 <button type="button" onClick={() => setViewKey(k => k + 1)} disabled={!scene}>Reset view</button>
                 <button type="button" onClick={fetchScene}>Refresh</button>
                 <span className="text-small">
@@ -256,4 +256,4 @@ function SceneUI() {
     )
 }
 
-export default SceneUI
+export default CalibrationScene

@@ -145,8 +145,8 @@ export default function IntrinsicCalibration() {
                         const path = paths[row.serial] ?? ""
 
                         let recordText = recordingThis ? "Stop" : "Record"
-                        if (thisBusy && status?.status === "downloading") recordText = "Downloading..."
-                        const calibrateText = thisBusy && status?.status === "processing" ? "Calibrating..." : "Calibrate"
+                        if (thisBusy && status?.status === "downloading") recordText = "Loading"
+                        const calibrateText = thisBusy && status?.status === "processing" ? "Calibrating" : "Calibrate"
 
                         return (
                             // div, not label: a label would forward clicks on "Camera 1:" to the Record button
@@ -167,7 +167,7 @@ export default function IntrinsicCalibration() {
                                 <div className="flex items-center gap-[1.5rem]">
                                     <button
                                         type="button"
-                                        className={`w-[9rem] ${recordingThis ? "bg-error text-bg-main border-none" : ""}`}
+                                        className={`w-[6rem] ${recordingThis ? "bg-error text-bg-main border-none" : ""}`}
                                         title={connected ? "" : "Connect the camera first"}
                                         disabled={pending !== null || (busy && !recordingThis) || (!connected && !recordingThis)}
                                         onClick={() => handleRecord(row, recordingThis)}
@@ -185,11 +185,18 @@ export default function IntrinsicCalibration() {
                                             disabled={busy}
                                             onChange={e => setPaths(p => ({ ...p, [row.serial]: e.target.value }))}
                                         />
-                                        <button type="button" disabled={busy} onClick={() => handleBrowse(row.serial)}>Browse</button>
+                                        <button
+                                            type="button"
+                                            className="w-[6rem]"
+                                            disabled={busy}
+                                            onClick={() => handleBrowse(row.serial)}
+                                        >
+                                            Browse
+                                        </button>
                                     </div>
                                     <button
                                         type="button"
-                                        className="w-[9rem]"
+                                        className="w-[6rem]"
                                         disabled={pending !== null || busy || (!path.trim() && !row.video)}
                                         onClick={() => handleCalibrate(row)}
                                     >

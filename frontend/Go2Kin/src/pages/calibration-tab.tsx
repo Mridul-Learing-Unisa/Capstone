@@ -6,7 +6,7 @@ import ExtrinsicCalibration from "../components/calibration/extrinsic-calibratio
 import SetOrigin from "../components/calibration/set-origin"
 import { autoLoad, BUSY, getStatus, type CalibrationStatus } from "../components/calibration/calibration-api"
 
-const SceneUI = lazy(() => import("../components/temp-ui-for-testing/scene-ui"))
+const CalibrationScene = lazy(() => import("../components/calibration/calibration-scene"))
 
 export default function CalibrationTab() {
     const [status, setStatus] = useState<CalibrationStatus | null>(null)
@@ -38,21 +38,18 @@ export default function CalibrationTab() {
     }, [])
 
     return (
-        <div className="w-full flex-1 min-h-0 flex flex-col gap-[1rem] p-[1.5rem]">
-            <LoadBar loadedFile={status?.loaded_file ?? null} onReload={refreshStatus} />
-
-            <div className="w-full flex-1 min-h-0 flex gap-[1.5rem]">
-                <div className="flex flex-col gap-[0.5rem] w-[45rem] shrink-0 overflow-y-auto pr-1">
-                    <CharucoConfig reloadKey={loadKey} />
-                    <IntrinsicCalibration />
-                    <ExtrinsicCalibration />
-                    <SetOrigin />
-                </div>
-
-                <Suspense fallback={<div className="flex-1 flex items-center justify-center text-small">Loading 3D scene...</div>}>
-                    <SceneUI />
-                </Suspense>
+        <div className="w-full flex-1 min-h-0 flex gap-[1.5rem] p-[1.5rem]">
+            <div className="flex flex-col gap-[0.5rem] w-[45rem] shrink-0 overflow-y-auto pr-1">
+                <LoadBar loadedFile={status?.loaded_file ?? null} onReload={refreshStatus} />
+                <CharucoConfig reloadKey={loadKey} />
+                <IntrinsicCalibration />
+                <ExtrinsicCalibration />
+                <SetOrigin />
             </div>
+
+            <Suspense fallback={<div className="flex-1 flex items-center justify-center text-small">Loading 3D scene...</div>}>
+                <CalibrationScene />
+            </Suspense>
         </div>
     )
 }

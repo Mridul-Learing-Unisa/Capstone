@@ -143,3 +143,6 @@ config/camera_profiles/profile_C3501326062418.json
 #batch file to launch from desktop
 Go2Kin.bat
 Go2Kin.ico
+
+# Local four-camera UI simulator
+code/api/mock_gopros/
