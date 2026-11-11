@@ -9,10 +9,10 @@ export type TrialStatus = "pending" | "processing" | "complete" | "failed" | "sk
 // what GET /status returns (only the fields the UI uses)
 export type ProcessingStatus = {
     state: RunState
-    current_trial: { index: number, total: number, name: string } | null
+    current_trial: { index: number, total: number, name: string, path: string } | null
     current_step: { index: number, name: string } | null
     steps: { name: string, status: StepStatus }[]       // steps of the trial being processed
-    trials: { name: string, session: string, status: TrialStatus, error: string | null }[]
+    trials: { name: string, session: string, path: string, status: TrialStatus, error: string | null }[]
 }
 
 export const ACTIVE_STATES: RunState[] = ["running", "stopping"]

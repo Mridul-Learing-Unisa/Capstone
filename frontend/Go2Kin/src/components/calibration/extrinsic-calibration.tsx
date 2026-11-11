@@ -185,7 +185,7 @@ export default function ExtrinsicCalibration() {
                 </label>
                 <button
                     type="button"
-                    className={`button-large w-[12rem]! ${buttonColour} ${buttonDisabled ? "cursor-not-allowed" : ""}`}
+                    className={`button-large mb-[1rem] w-[12rem]! ${buttonColour} ${buttonDisabled ? "cursor-not-allowed" : ""}`}
                     disabled={buttonDisabled}
                     onClick={onClick}
                 >
