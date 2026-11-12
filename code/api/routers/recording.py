@@ -194,6 +194,11 @@ def _download_one(camera, video_path: Path) -> None:
     camera.deleteAllFiles()
 
 
+def _log(job: dict, message: str) -> None:
+    """Add a line with the time to the job's log, the Recording tab shows it in its Log box."""
+    job["log"].append(f"{time.strftime('%H:%M:%S')}  {message}")
+
+
 def process_recording(task_id, cameras, recording_info, tasks, project_manager, calibration_state, app_config):
     """cameras: {serial: (camera, gopro_number)} for every camera that was stopped."""
     job = tasks[task_id]
@@ -204,26 +209,32 @@ def process_recording(task_id, cameras, recording_info, tasks, project_manager, 
 
         # Download the new video from each stopped camera in parallel; one failure doesn't stop the rest.
         job["status"] = "downloading"
+        _log(job, f"Downloading videos from {len(cameras)} camera(s)...")
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
                 executor.submit(_download_one, camera, video_dir / f"{trial_name}_GP{number}.mp4"): serial
                 for serial, (camera, number) in cameras.items()
             }
             for future, serial in futures.items():
+                number = cameras[serial][1]
                 try:
                     future.result(timeout=ENCODING_WAIT_S + 300)
+                    _log(job, f"GoPro {number} downloaded")
                 except Exception as error:
                     job["errors"][serial] = f"Download failed: {error}"
+                    _log(job, f"GoPro {number} download failed: {error}")
 
         # The camera's own extension is kept (e.g. .MP4), so list what actually arrived.
         video_paths = sorted(str(f) for f in video_dir.iterdir() if f.is_file() and f.suffix.lower() == ".mp4")
         if len(video_paths) < 2:
             job["status"] = "failed"
             job["error"] = f"Only {len(video_paths)} video(s) downloaded; at least 2 are needed to sync."
+            _log(job, job["error"])
             return
 
         # Calculate the time offset between the downloaded videos.
         job["status"] = "syncing"
+        _log(job, "Looking for the claps to sync the videos...")
 
         from audio_sync import (
             compute_sync_offsets,
@@ -240,6 +251,7 @@ def process_recording(task_id, cameras, recording_info, tasks, project_manager, 
             output_dir=str(video_dir),
             camera_positions=_camera_positions_for_sync(camera_array, video_paths),
             sound_source_position=recording_info["sound_source_position"] or None,
+            progress_callback=lambda message: _log(job, message),   # audio_sync's own step-by-step output
         )
         passed, reasons = evaluate_sync_acceptance(offsets)
 
@@ -260,9 +272,14 @@ def process_recording(task_id, cameras, recording_info, tasks, project_manager, 
         # Only create aligned videos when the sync checks pass.
         if not passed:
             job["status"] = "failed"
+            _log(job, "Sync check failed:")
+            for reason in reasons:
+                _log(job, f"  - {reason}")
             return
 
-        trim_and_sync_videos(video_paths, offsets, str(video_dir))
+        _log(job, "Sync check passed, trimming the videos...")
+        trim_and_sync_videos(video_paths, offsets, str(video_dir),
+                             progress_callback=lambda message: _log(job, message))
         project_manager.update_trial(
             recording_info["project"],
             recording_info["session"],
@@ -270,10 +287,12 @@ def process_recording(task_id, cameras, recording_info, tasks, project_manager, 
             synced=True,
         )
         job["status"] = "complete"
+        _log(job, "Done, videos are synced")
 
     except Exception as error:
         job["status"] = "failed"
         job["error"] = str(error)
+        _log(job, f"Error: {error}")
 
     finally:
         _reset(recording_info)
@@ -314,7 +333,7 @@ def stop_recording(
 
     # Create a small status record that the frontend can poll.
     task_id = str(uuid4())
-    recording_background_tasks[task_id] = {"status": "pending", "results": None, "errors": errors}
+    recording_background_tasks[task_id] = {"status": "pending", "results": None, "errors": errors, "log": []}
 
     if not cameras:
         recording_background_tasks[task_id].update(status="failed", error="No camera could be stopped.")
