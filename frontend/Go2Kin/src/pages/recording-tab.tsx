@@ -4,9 +4,10 @@ import RecordTrial from "../components/recording/record-trial"
 // import CameraGrid from "../components/recording/camera-grid"
 import {
     FINISHED, getCameras, getJob, getRecordingStatus, getSavedSoundSource, getSelection, nextTrialName,
-    startRecording, stopRecording, type Camera, type Job, type Selection,
+    startRecording, stopRecording, syncPlotUrl, type Camera, type Job, type Selection,
 } from "../components/recording/recording-api"
 import TrialsList from "../components/recording/trials-list"
+import AudioGraphLog from "../components/recording/audio-graph-log"
 import ProcessTrials from "../components/processing/process-trials"
 
 // what to show under the Record button while the job runs
@@ -14,6 +15,11 @@ const JOB_TEXT: Record<string, string> = {
     pending: "Getting ready to download...",
     downloading: "Downloading videos from the cameras...",
     syncing: "Syncing videos using the clap...",
+}
+
+// "HH:MM:SS  message", same look as the lines the server adds to the job log
+function stamp(message: string) {
+    return `${new Date().toTimeString().slice(0, 8)}  ${message}`
 }
 
 // Recording tab from the V1 Figma design.
@@ -34,6 +40,8 @@ export default function RecordingTab() {
 
     const [job, setJob] = useState<Job | null>(null)       // download + sync after stopping
     const [jobTrial, setJobTrial] = useState("")            // the trial that job belongs to
+    const [jobWhere, setJobWhere] = useState<Selection | null>(null)   // project/session it was saved in
+    const [pageLog, setPageLog] = useState<string[]>([])   // start/stop lines, the job log comes after
     const [trialsVersion, setTrialsVersion] = useState(0)   // bump to reload the trials list
     // trials ticked in TrialsList (for Process), remembered with the session they belong to
     const [picked, setPicked] = useState({ session: "", names: [] as string[] })
@@ -132,18 +140,23 @@ export default function RecordingTab() {
         setError("")
         try {
             const result = await startRecording(trialName.trim(), connected.map(c => c.serial), sound.map(Number))
+            // new take, so start a fresh log
+            const lines = [stamp(`Recording "${trialName.trim()}" on ${result.cameras_used.length} camera(s)`)]
             // the server carries on with the cameras that did start, so just warn about the rest
             const failed = Object.keys(result.failed ?? {})
             if (failed.length > 0) {
                 const names = failed.map(serial => cameras.find(c => c.serial === serial)?.name ?? serial)
                 setError(`Not recording on: ${names.join(", ")}`)
+                lines.push(stamp(`Not recording on: ${names.join(", ")}`))
             }
+            setPageLog(lines)
             setRecordingCams(result.cameras_used)
             setJob(null)
             setStartedAt(Date.now())
             setTrialsVersion(v => v + 1)   // start makes the trial folder, so show it
         } catch (e) {
             setError((e as Error).message)
+            setPageLog(log => [...log, stamp(`Couldn't start: ${(e as Error).message}`)])
         }
         setBusy(false)
     }
@@ -155,14 +168,25 @@ export default function RecordingTab() {
             const result = await stopRecording()
             setStartedAt(null)
             setJobTrial(trialName.trim())
+            setJobWhere(selection)
             setJob({ ...result, results: null })
+            setPageLog(log => [...log, stamp("Recording stopped")])
             // stop can fail straight away if no camera could stop
             if (FINISHED.includes(result.status)) setTrialName(name => nextTrialName(name))
         } catch (e) {
             setError((e as Error).message)
+            setPageLog(log => [...log, stamp(`Couldn't stop: ${(e as Error).message}`)])
         }
         setBusy(false)
     }
+
+    // graph for the last take once its job is done (the server only has one if the claps were found)
+    const where = jobWhere ?? selection
+    let graphUrl: string | null = null
+    if (job && FINISHED.includes(job.status) && where.project && where.session && jobTrial) {
+        graphUrl = syncPlotUrl(where.project, where.session, jobTrial, job.task_id)
+    }
+    const logLines = [...pageLog, ...(job?.log ?? [])]
 
     // ticks from another session don't count, so switching session clears them
     const sessionKey = `${selection.project}/${selection.session}`
@@ -191,6 +215,7 @@ export default function RecordingTab() {
                     onStart={handleStart}
                     onStop={handleStop}
                 />
+                <AudioGraphLog graphUrl={graphUrl} logLines={logLines} />
                 <ProcessTrials />
             </div>
 
