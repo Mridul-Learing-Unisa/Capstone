@@ -30,7 +30,7 @@ export default function AudioGraphLog({ graphUrl, logLines }: Props) {
 
             <div className="flex-1 flex flex-col gap-2 min-w-0">
                 <h2>Log</h2>
-                <div ref={logBox} className="h-56 bg-[#111] rounded p-3 overflow-y-auto text-left">
+                <div ref={logBox} className="h-56 bg-[#111] rounded p-3 overflow-y-auto text-center">
                     {logLines.length === 0
                         ? <p className="text-small">Nothing yet, press Record to start</p>
                         : logLines.map((line, i) => (
