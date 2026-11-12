@@ -83,7 +83,7 @@ export default function RecordTrial({ trialName, sound, locked, onTrialNameChang
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 pl-[12rem] mt-2">
+            <div className="flex items-center gap-4 ml-[12rem] mb-[1rem] mt-2">
                 <button
                     type="button"
                     className={`button-large disabled:cursor-not-allowed ${buttonColour}`}

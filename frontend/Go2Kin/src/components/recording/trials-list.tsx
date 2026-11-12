@@ -13,8 +13,8 @@ type Props = {
 const COL = {
     check: "w-[2rem] shrink-0",
     trial: "w-[15rem] shrink-0 text-left truncate",
-    date: "w-[10rem] shrink-0 text-left",
-    participant: "w-[10rem] shrink-0 text-left truncate",
+    date: "w-[15rem] shrink-0 text-left",
+    participant: "w-[15rem] shrink-0 text-left truncate",
     status: "flex-1 text-left",
 }
 
@@ -113,10 +113,10 @@ export default function TrialsList({ selection, activeTrial, refreshKey, selecte
                                     {/* the whole row is the label, so clicking anywhere on it toggles the box (like tkinter) */}
                                     <label className={`flex items-center h-[2rem] px-[0.5rem] cursor-pointer hover:bg-bg-tertiary ${rowBg}`}>
                                         <span className={COL.check}>
-                                            <input type="checkbox" className="accent-success cursor-pointer"
+                                            <input type="checkbox" className="accent-success mt-2 cursor-pointer"
                                                 checked={checked} onChange={() => toggle(trial.trial_name)} />
                                         </span>
-                                        <span className={`data ${COL.trial}`} title={trial.trial_name}>{trial.trial_name}</span>
+                                        <span className={COL.trial} title={trial.trial_name}>{trial.trial_name}</span>
                                         <span className={COL.date}>{formatDate(trial)}</span>
                                         <span className={COL.participant}>{formatParticipant(trial.subject_id, subjects)}</span>
                                         <span className={COL.status}><Dot colour={syncColour(trial, activeTrial)} /></span>
