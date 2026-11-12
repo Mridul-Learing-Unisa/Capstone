@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { BrowserRouter, NavLink, Route, Routes } from "react-router"
+import { BrowserRouter, Navigate, NavLink, Route, Routes } from "react-router"
 import TempUIForStyling from "./components/temp-ui-for-styling/temp-ui-for-styling.tsx"
 import ProjectUI from "./components/temp-ui-for-testing/project-ui"
 import CameraUI from "./components/temp-ui-for-testing/camera-ui"
@@ -17,7 +17,7 @@ import Cameras from "./components/cameras/cameras.tsx"
 
 const SceneUI = lazy(() => import("./components/calibration/calibration-scene.tsx"))
 
-// the temp panels for poking each API by hand, kept on the home page for now
+// the temp panels for poking each API by hand, kept accessible under /testing
 function TestingUI() {
   return (
     <>
@@ -53,16 +53,16 @@ function App() {
       <nav className="flex gap-2 px-6 pt-2 border-b border-[#BBBBBB]">
         <NavLink to="/calibration" className={tabClass}>Calibration</NavLink>
         <NavLink to="/recording" className={tabClass}>Recording</NavLink>
-        <NavLink to="/" end className={tabClass}>Testing UI</NavLink>
       </nav>
 
       {/* min-h-0 lets pages fill exactly the space between the tabs and the footer; anything taller scrolls here */}
       <main className="flex flex-col flex-1 min-h-0 overflow-y-auto">
         <Routes>
-          <Route path="/" element={<TestingUI />} />
+          <Route path="/" element={<Navigate to="/calibration" replace />} />
           <Route path="/calibration" element={<CalibrationTab />} />
-          <Route path="/calliberation" element={<CalibrationTab />} />
+          <Route path="/calliberation" element={<Navigate to="/calibration" replace />} />
           <Route path="/recording" element={<RecordingTab />} />
+          <Route path="/testing" element={<TestingUI />} />
         </Routes>
       </main>
 
