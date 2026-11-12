@@ -12,6 +12,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import FileResponse
 
 from go2kin import save_app_config
 from api.deps import (
@@ -390,3 +391,22 @@ def get_recording_job(
         raise HTTPException(status_code=404, detail="Recording task not found.")
 
     return {"task_id": task_id, **job}
+
+
+@router.get("/sync-plot")
+def get_sync_plot(
+    project: str,
+    session: str,
+    trial: str,
+    project_manager=Depends(get_project_manager),
+):
+    """The clap graph audio_sync saves for a trial (video/synced/sync_onsets.png),
+    shown in the Recording tab's Audio Graph box."""
+    plot = project_manager.get_trial_video_path(project, session, trial) / "synced" / "sync_onsets.png"
+
+    # the names come from the browser, so make sure we only ever send files from the data folder
+    inside_data = plot.resolve().is_relative_to(project_manager.data_root.resolve())
+    if not inside_data or not plot.is_file():
+        raise HTTPException(status_code=404, detail="No audio graph for this trial yet.")
+
+    return FileResponse(plot, media_type="image/png")
