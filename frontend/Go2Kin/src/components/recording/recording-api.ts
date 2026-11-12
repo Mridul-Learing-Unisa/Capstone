@@ -25,6 +25,7 @@ export type Job = {
     status: string   // pending, downloading, syncing, complete or failed
     error?: string
     errors?: Record<string, string>   // cameras that had a problem, by serial
+    log?: string[]                    // step-by-step messages, "HH:MM:SS  text"
     results: {
         passed: boolean
         reasons: string[]
@@ -121,6 +122,13 @@ export function startPreview(serial: string) {
 
 export function stopPreview(serial: string) {
     return request(`/api/preview/${serial}/stop`, "POST")
+}
+
+// the clap graph the sync step saves for a trial, works straight in an <img src>.
+// version just makes the browser fetch it again after a new take with the same name
+export function syncPlotUrl(project: string, session: string, trial: string, version: string) {
+    const query = new URLSearchParams({ project, session, trial, v: version })
+    return `${HOST}/api/recording/sync-plot?${query}`
 }
 
 // MJPEG stream, works straight in an <img src>
