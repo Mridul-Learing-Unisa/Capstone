@@ -31,11 +31,15 @@ export default function AudioGraphLog({ graphUrl, logLines }: Props) {
             <div className="flex-1 flex flex-col gap-2 min-w-0">
                 <h2>Log</h2>
                 <div ref={logBox} className="h-56 bg-[#111] rounded p-3 overflow-y-auto text-center">
-                    {logLines.length === 0
-                        ? <p className="text-small">Nothing yet, press Record to start</p>
-                        : logLines.map((line, i) => (
-                            <p key={i} className="font-mono text-xs text-[#ddd] whitespace-pre-wrap break-words">{line}</p>
-                        ))}
+                    {/* sits in the middle while the log is short. it's at least as tall as the box,
+                        so once there are lots of lines it just grows and the box scrolls normally */}
+                    <div className="min-h-full flex flex-col justify-center">
+                        {logLines.length === 0
+                            ? <p className="text-small">Nothing yet, press Record to start</p>
+                            : logLines.map((line, i) => (
+                                <p key={i} className="font-mono text-xs text-[#ddd] whitespace-pre-wrap break-words">{line}</p>
+                            ))}
+                    </div>
                 </div>
             </div>
         </section>
