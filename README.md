@@ -2,6 +2,8 @@
 
 📖 **[User Manual & Documentation (AI generated)](https://f-fraysse.github.io/Go2Kin/)**
 
+[FastAPI reference for developers](docs/api-reference.md)
+
 **WORK IN PROGRESS**
 
 Integrated markerless motion capture pipeline from 2-4 USB-connected GoPro cameras. Single GUI for the full workflow - from camera setup to OpenSim output.
