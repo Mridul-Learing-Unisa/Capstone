@@ -6,6 +6,7 @@ import CalibrationWarningModal from '../calibration/calibration-warning-modal'
 import { formatAge, useCalibrationFreshness } from './calibration-freshness'
 
 export const OPEN_CALIBRATION_WARNING = 'open-calibration-warning'
+const WARNING_SNOOZE_MS = 12 * 60 * 60 * 1000
 
 // Green when the current project's latest calibration is from the last 24 hours, red/orange otherwise.
 export default function CalibrationStatus() {
@@ -20,13 +21,12 @@ export default function CalibrationStatus() {
     )
 
     useEffect(() => {
-        if (!project || !freshness) return
-        const isOld = freshness.age_seconds !== null && (!fresh || freshness.age_seconds >= 86400)
-        const alreadyDismissed = sessionStorage.getItem(`calib_warning_dismissed_${project}`)
-        if (isOld && !alreadyDismissed) {
+        if (!project || !isTooOld) return
+        const snoozedUntil = Number(localStorage.getItem(`calib_warning_snoozed_until_${project}`)) || 0
+        if (Date.now() >= snoozedUntil) {
             setIsWarningOpen(true)
         }
-    }, [project, freshness, fresh])
+    }, [project, freshness, isTooOld])
 
     useEffect(() => {
         const handleOpenWarning = () => setIsWarningOpen(true)
@@ -57,7 +57,10 @@ export default function CalibrationStatus() {
     const handleDismissLater = () => {
         setIsWarningOpen(false)
         if (project) {
-            sessionStorage.setItem(`calib_warning_dismissed_${project}`, 'true')
+            localStorage.setItem(
+                `calib_warning_snoozed_until_${project}`,
+                String(Date.now() + WARNING_SNOOZE_MS),
+            )
         }
     }
 
