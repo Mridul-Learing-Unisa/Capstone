@@ -113,6 +113,12 @@ Each camera is identified by its serial number. The GoPro HTTP API is accessed o
    ```
    This creates a reference file in `config/settings_references/` that maps setting IDs to human-readable names and available options.
 
+### Start Go2Kin on Windows
+
+After completing setup, run `npm install` once in `frontend/Go2Kin`. Then double-click `Start Go2Kin.cmd` in the repository root. It activates the `Go2Kin` Conda environment, starts the API and frontend, and opens Go2Kin in your default browser when both are ready.
+
+Keep both server windows open while using Go2Kin. To stop it, press `Ctrl+C` in each server window, then close the windows. For desktop access, create a shortcut to `Start Go2Kin.cmd`.
+
 ## Usage
 
 ```
